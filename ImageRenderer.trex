@@ -1,4 +1,4 @@
-ding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <manifest manifest-version="0.1" xmlns="http://www.tableau.com/xml/extension_manifest">
   <dashboard-extension id="com.versedata.imagerenderer" extension-version="1.0.0">
     <default-locale>en_US</default-locale>
@@ -12,14 +12,12 @@ ding="utf-8"?>
       organization="VerseData"
       website="https://versedata.github.io/tableau-image-render/index.html" />
 
-    <!-- Supported API version -->
     <min-api-version>1.7</min-api-version>
 
     <source-location>
       <url>https://versedata.github.io/tableau-image-render/index.html</url>
     </source-location>
 
-    <!-- No special permissions are needed for mark selection -->
     <context-menu>
       <configure-context-menu-item />
     </context-menu>
