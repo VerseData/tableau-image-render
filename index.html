@@ -3,127 +3,190 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Tableau Image Renderer</title>
+    <title>Tableau Image Gallery</title>
 
-    <!-- Tableau Extensions API -->
     <script src="https://unpkg.com/tableau-api@1.7.0/dist/tableau.extensions.1.latest.min.js"></script>
 
     <style>
       html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-      .wrap { height: 100%; display: flex; flex-direction: column; }
+      .root { height: 100%; display: flex; flex-direction: column; background: #fff; }
 
       .bar {
-        display: flex; align-items: center; gap: 8px;
+        display: flex; gap: 8px; align-items: center;
         padding: 8px 10px; border-bottom: 1px solid #e5e5e5;
-        background: #fff;
       }
       .bar button {
-        padding: 6px 10px; cursor: pointer; border: 1px solid #ddd; border-radius: 8px;
-        background: #fff;
+        padding: 6px 10px; cursor: pointer; border: 1px solid #ddd; border-radius: 10px; background: #fff;
       }
-      .bar button:active { transform: translateY(1px); }
       .bar input {
-        flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 8px;
-        background: #fafafa;
+        flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 10px; background: #fafafa;
       }
-      .bar .group { display: flex; gap: 6px; align-items: center; }
+      .bar select {
+        padding: 6px 10px; border: 1px solid #ddd; border-radius: 10px; background: #fff;
+      }
+      .bar .small { color:#666; font-size: 12px; }
+
+      .content { flex: 1; min-height: 0; display: flex; }
+
+      .grid {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 10px;
+        background: #f7f7f7;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
+        align-content: start;
+      }
+
+      .card {
+        background: #fff; border: 1px solid #e6e6e6; border-radius: 14px;
+        overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        display: flex; flex-direction: column;
+        cursor: pointer;
+      }
+      .thumb {
+        height: 120px;
+        background: #eee;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+      .thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .meta {
+        padding: 8px 10px;
+        font-size: 12px;
+        color: #333;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .meta .muted { color: #777; }
+
+      .empty {
+        position: absolute;
+        inset: 50px 10px 10px 10px;
+        display: grid;
+        place-items: center;
+        color: #666;
+        text-align: center;
+        padding: 18px;
+      }
+
+      /* Viewer overlay */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        display: none;
+        z-index: 999999;
+      }
+      .overlay.open { display: block; }
+
+      .viewerBar {
+        position: absolute;
+        top: 10px; left: 10px; right: 10px;
+        display: flex; gap: 8px; align-items: center;
+      }
+      .viewerBar button {
+        padding: 8px 10px; cursor: pointer; border: 1px solid #444; border-radius: 12px;
+        background: rgba(20,20,20,0.85); color: #eee;
+      }
+      .viewerBar .spacer { flex: 1; }
+      .viewerBar .title {
+        color: #ddd; font-size: 12px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
 
       .stage {
-        position: relative;
-        flex: 1;
-        background: #f7f7f7;
-        overflow: hidden;
-        display: grid;
-        place-items: center;
-        user-select: none;
-      }
-
-      /* Transform wrapper that we pan/zoom */
-      #viewport {
         position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        cursor: grab;
+        inset: 54px 10px 10px 10px;
+        overflow: hidden;
+        border-radius: 16px;
+        background: #111;
+      }
+      #viewport {
+        position: absolute; inset: 0;
+        display: grid; place-items: center;
+        cursor: grab; user-select: none;
       }
       #viewport.dragging { cursor: grabbing; }
-
-      img {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
+      #fullImg {
+        max-width: 95%;
+        max-height: 95%;
         transform-origin: center center;
         will-change: transform;
-        pointer-events: none; /* we handle gestures on viewport */
+        pointer-events: none;
       }
 
-      .hint {
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        padding: 12px;
-        color: #555;
-        font-size: 13px;
-        text-align: center;
+      .pill {
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid #444;
+        background: rgba(20,20,20,0.85);
+        color: #ddd;
+        font-size: 12px;
       }
-      .hint .small { color: #777; font-size: 12px; margin-top: 6px; }
-      .err { color: #b00020; }
-
-      /* Fullscreen (in-iframe) mode */
-      .fullscreen {
-        position: fixed !important;
-        inset: 0 !important;
-        z-index: 999999 !important;
-        background: #111 !important;
-      }
-      .fullscreen .bar { background: #111; border-bottom-color: #333; }
-      .fullscreen .bar button, .fullscreen .bar input {
-        background: #1b1b1b; color: #eee; border-color: #333;
-      }
-      .fullscreen .stage { background: #111; }
-
-      /* Small help text */
-      .kbd {
-        font-size: 11px;
-        color: #666;
-        padding-left: 6px;
-        white-space: nowrap;
-      }
-      .fullscreen .kbd { color: #aaa; }
     </style>
   </head>
 
   <body>
-    <div id="root" class="wrap">
+    <div class="root">
       <div class="bar">
-        <div class="group">
-          <button id="refreshBtn" type="button" title="Refresh selection">Refresh</button>
-        </div>
+        <button id="refreshBtn">Refresh</button>
 
-        <div class="group">
-          <button id="zoomOutBtn" type="button" title="Zoom out (−)">−</button>
-          <button id="zoomInBtn" type="button" title="Zoom in (+)">+</button>
-          <button id="resetBtn" type="button" title="Reset (0)">Reset</button>
-          <button id="fitBtn" type="button" title="Fit to view (F)">Fit</button>
-        </div>
+        <label class="small">URL field:</label>
+        <select id="fieldSelect">
+          <option value="">Auto-detect</option>
+        </select>
 
-        <div class="group">
-          <button id="fsBtn" type="button" title="Toggle full-screen (Enter)">Full screen</button>
-        </div>
+        <label class="small">Max:</label>
+        <select id="limitSelect">
+          <option value="50">50</option>
+          <option value="100" selected>100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+        </select>
 
         <input id="status" readonly value="Initializing..." />
-        <span class="kbd" title="Shortcuts: + / − / 0 / F / Enter">(+ − 0 F ⏎)</span>
       </div>
 
-      <div id="stage" class="stage">
-        <div id="placeholder" class="hint">
-          Select a mark to display an image.
-          <div class="small">Wheel/trackpad to zoom • Drag to pan • Double-click to zoom</div>
+      <div class="content">
+        <div id="grid" class="grid"></div>
+        <div id="empty" class="empty" style="display:none;">
+          <div>
+            <div style="font-size:14px; margin-bottom:6px;">No images found.</div>
+            <div style="font-size:12px; color:#777;">
+              Select rows/marks that contain image URLs (Nulls are ignored).
+            </div>
+          </div>
         </div>
+      </div>
+    </div>
 
+    <!-- Viewer overlay -->
+    <div id="overlay" class="overlay" aria-hidden="true">
+      <div class="viewerBar">
+        <button id="closeBtn">Close (Esc)</button>
+        <button id="prevBtn">◀ Prev</button>
+        <button id="nextBtn">Next ▶</button>
+        <span id="viewerTitle" class="title"></span>
+        <span class="spacer"></span>
+        <button id="zoomOutBtn">−</button>
+        <button id="zoomInBtn">+</button>
+        <button id="fitBtn">Fit</button>
+        <button id="resetBtn">Reset</button>
+        <span id="countPill" class="pill"></span>
+      </div>
+
+      <div class="stage" id="stage">
         <div id="viewport">
-          <img id="img" alt="Selected image" style="display:none;" />
+          <img id="fullImg" alt="Selected image" />
         </div>
       </div>
     </div>
