@@ -1,5 +1,28 @@
-let dashboardRef = null;
+// =====================
+// Tableau Image Gallery (Full Sheet)
+// - Reads ALL image URLs from a chosen worksheet via getSummaryDataAsync()
+// - Auto-detects URL-like columns OR lets user pick the exact field
+// - Skips Null/None/empty values
+// - Dedupes URLs
+// - Avoids double initializeAsync()
+// =====================
 
+let dashboardRef = null;
+let initPromise = null;
+
+async function ensureInitialized() {
+  if (dashboardRef) return dashboardRef;
+  if (!initPromise) {
+    initPromise = (async () => {
+      await tableau.extensions.initializeAsync();
+      dashboardRef = tableau.extensions.dashboardContent.dashboard;
+      return dashboardRef;
+    })();
+  }
+  return initPromise;
+}
+
+// ---------- DOM ----------
 const statusEl = document.getElementById("status");
 const gridEl = document.getElementById("grid");
 const emptyEl = document.getElementById("empty");
@@ -7,30 +30,59 @@ const refreshBtn = document.getElementById("refreshBtn");
 const fieldSelect = document.getElementById("fieldSelect");
 const limitSelect = document.getElementById("limitSelect");
 
-// Add a worksheet selector (we'll inject it beside URL field dropdown)
+// Inject worksheet selector next to URL field dropdown
 const barEl = document.querySelector(".bar");
+const sheetLabel = document.createElement("span");
+sheetLabel.className = "small";
+sheetLabel.textContent = "Sheet:";
+sheetLabel.style.marginLeft = "6px";
+
 const sheetSelect = document.createElement("select");
 sheetSelect.id = "sheetSelect";
 sheetSelect.style.marginLeft = "6px";
+
+barEl.insertBefore(sheetLabel, fieldSelect);
 barEl.insertBefore(sheetSelect, fieldSelect);
 
+// ---------- Events ----------
 sheetSelect.addEventListener("change", () => {
-  // reset field dropdown when sheet changes
   fieldSelect.innerHTML = `<option value="">Auto-detect</option>`;
+  // invalidate cache when sheet changes
+  lastCacheKey = null;
+  cached = null;
   refreshAll();
 });
-refreshBtn.addEventListener("click", refreshAll);
-fieldSelect.addEventListener("change", refreshAll);
-limitSelect.addEventListener("change", refreshAll);
+refreshBtn.addEventListener("click", () => {
+  lastCacheKey = null;
+  cached = null;
+  refreshAll();
+});
+fieldSelect.addEventListener("change", () => {
+  lastCacheKey = null;
+  cached = null;
+  refreshAll();
+});
+limitSelect.addEventListener("change", () => {
+  lastCacheKey = null;
+  cached = null;
+  refreshAll();
+});
 
-let images = []; // {url, idx}
+// ---------- State ----------
+let images = []; // [{url}]
 let lastCacheKey = null;
 let cached = null;
 
-function setStatus(msg) { statusEl.value = msg; }
+// ---------- Helpers ----------
+function setStatus(msg) {
+  statusEl.value = msg;
+}
 
 function escapeHtml(str) {
-  return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 function normalizeUrl(raw) {
@@ -60,6 +112,7 @@ function getChosenSheet() {
 
 function renderGrid() {
   gridEl.innerHTML = "";
+
   if (!images.length) {
     emptyEl.style.display = "grid";
     return;
@@ -86,29 +139,40 @@ function renderGrid() {
     card.appendChild(thumb);
     card.appendChild(meta);
 
-    card.addEventListener("click", () => window.open(item.url, "_blank", "noopener,noreferrer"));
+    // Keep simple for now: open image in new tab.
+    // If you want, we can add an in-extension fullscreen viewer with zoom/pan.
+    card.addEventListener("click", () =>
+      window.open(item.url, "_blank", "noopener,noreferrer")
+    );
+
     gridEl.appendChild(card);
   });
 }
 
 function fillSheetSelect() {
-  const sheets = dashboardRef.worksheets || [];
+  if (!dashboardRef?.worksheets?.length) return;
+
+  const sheets = dashboardRef.worksheets;
   const current = sheetSelect.value;
+
   sheetSelect.innerHTML = "";
-  sheets.forEach(ws => {
+  sheets.forEach((ws) => {
     const opt = document.createElement("option");
     opt.value = ws.name;
     opt.textContent = ws.name;
     sheetSelect.appendChild(opt);
   });
 
-  if (current && sheets.some(s => s.name === current)) sheetSelect.value = current;
+  if (current && sheets.some((s) => s.name === current)) {
+    sheetSelect.value = current;
+  }
 }
 
 function buildFieldOptions(columns) {
   const current = fieldSelect.value;
   fieldSelect.innerHTML = `<option value="">Auto-detect</option>`;
-  columns.forEach(c => {
+
+  columns.forEach((c) => {
     const label = c.fieldName || c.caption || "";
     if (!label) return;
     const opt = document.createElement("option");
@@ -116,27 +180,35 @@ function buildFieldOptions(columns) {
     opt.textContent = label;
     fieldSelect.appendChild(opt);
   });
+
   if (current) fieldSelect.value = current;
 }
 
 function findCandidateColumnIndexes(columns, chosenField) {
   if (chosenField) {
-    const idx = columns.findIndex(c => (c.fieldName === chosenField) || (c.caption === chosenField));
+    const idx = columns.findIndex(
+      (c) => c.fieldName === chosenField || c.caption === chosenField
+    );
     return idx >= 0 ? [idx] : [];
   }
+
+  // name-based heuristic first
   const hints = ["url", "image", "img", "photo", "link", "href"];
   const idxs = [];
   columns.forEach((c, i) => {
     const name = `${c.fieldName || ""} ${c.caption || ""}`.toLowerCase();
-    if (hints.some(h => name.includes(h))) idxs.push(i);
+    if (hints.some((h) => name.includes(h))) idxs.push(i);
   });
-  // if no hints, scan all columns
+
+  // if nothing matches, scan all columns
   return idxs.length ? idxs : columns.map((_, i) => i);
 }
 
 async function getAllUrlsFromWorksheet(ws, limit, chosenField) {
-  // Use Summary Data (what’s in the current view). This respects filters.
-  const summary = await ws.getSummaryDataAsync({ maxRows: limit * 5 }); // allow null skipping
+  // Summary data = what's currently in the worksheet view (respects filters)
+  // Pull extra rows so Nulls don't cause us to return too few images
+  const summary = await ws.getSummaryDataAsync({ maxRows: limit * 10 });
+
   const columns = summary.columns || [];
   const rows = summary.data || [];
 
@@ -148,30 +220,46 @@ async function getAllUrlsFromWorksheet(ws, limit, chosenField) {
   for (const row of rows) {
     for (const colIdx of idxs) {
       const cell = row[colIdx];
-      const raw = (cell?.value ?? cell?.formattedValue ?? null);
+      // Prefer raw value; formattedValue can be "Null"
+      const raw = cell?.value ?? cell?.formattedValue ?? null;
       const url = normalizeUrl(raw);
       if (!url) continue;
+
       out.push(url);
-      if (out.length >= limit) return { urls: out, totalRows: rows.length };
+      if (out.length >= limit) {
+        return { urls: out, totalRows: rows.length };
+      }
     }
   }
+
   return { urls: out, totalRows: rows.length };
 }
 
+// ---------- Main ----------
 async function refreshAll() {
   try {
+    await ensureInitialized();
+
     setStatus("Loading worksheet data...");
     fillSheetSelect();
 
-    const sheetName = getChosenSheet() || dashboardRef.worksheets?.[0]?.name;
+    const sheetName =
+      getChosenSheet() || dashboardRef.worksheets?.[0]?.name || null;
+
     if (!sheetName) {
-      setStatus("No worksheets found");
+      emptyEl.style.display = "grid";
+      emptyEl.innerHTML = `<div style="color:#b00020; text-align:center;">No worksheets found.</div>`;
+      setStatus("No worksheets");
       return;
     }
     sheetSelect.value = sheetName;
 
-    const ws = dashboardRef.worksheets.find(w => w.name === sheetName);
+    const ws = dashboardRef.worksheets.find((w) => w.name === sheetName);
     if (!ws) {
+      emptyEl.style.display = "grid";
+      emptyEl.innerHTML = `<div style="color:#b00020; text-align:center;">Worksheet not found: ${escapeHtml(
+        sheetName
+      )}</div>`;
       setStatus("Worksheet not found");
       return;
     }
@@ -179,7 +267,6 @@ async function refreshAll() {
     const limit = getLimit();
     const chosenField = getChosenField();
 
-    // Cache key to avoid reloading on minor UI events
     const cacheKey = `${sheetName}::${chosenField || "auto"}::${limit}`;
     if (cacheKey === lastCacheKey && cached) {
       images = cached;
@@ -188,9 +275,13 @@ async function refreshAll() {
       return;
     }
 
-    const { urls, totalRows } = await getAllUrlsFromWorksheet(ws, limit, chosenField);
+    const { urls, totalRows } = await getAllUrlsFromWorksheet(
+      ws,
+      limit,
+      chosenField
+    );
 
-    // Dedup
+    // Deduplicate
     const seen = new Set();
     const unique = [];
     for (const u of urls) {
@@ -204,20 +295,31 @@ async function refreshAll() {
     lastCacheKey = cacheKey;
 
     renderGrid();
-    setStatus(`Found ${images.length} image(s) from ${totalRows} row(s) in "${sheetName}"${images.length >= limit ? " (limit reached)" : ""}`);
+    setStatus(
+      `Found ${images.length} image(s) from ${totalRows} row(s) in "${sheetName}"${
+        images.length >= limit ? " (limit reached)" : ""
+      }`
+    );
   } catch (e) {
-    console.error(e);
+    console.error("refreshAll error:", e);
     emptyEl.style.display = "grid";
-    emptyEl.innerHTML = `<div style="color:#b00020; text-align:center;">Error: ${escapeHtml(e?.message || String(e))}<br/><br/>If this says permissions, you must enable <b>Full Data</b> permission in the .trex.</div>`;
+    emptyEl.innerHTML = `<div style="color:#b00020; text-align:center;">
+      Error: ${escapeHtml(e?.message || String(e))}
+      <br/><br/>
+      If this mentions permissions, your .trex must include <b>&lt;permission&gt;full data&lt;/permission&gt;</b>.
+    </div>`;
     setStatus("Error");
   }
 }
 
-async function init() {
-  await tableau.extensions.initializeAsync();
-  dashboardRef = tableau.extensions.dashboardContent.dashboard;
-  fillSheetSelect();
-  await refreshAll();
-}
-
-init();
+// Kick off once (do NOT call initializeAsync elsewhere)
+ensureInitialized()
+  .then(() => refreshAll())
+  .catch((e) => {
+    console.error("Init failed:", e);
+    emptyEl.style.display = "grid";
+    emptyEl.innerHTML = `<div style="color:#b00020; text-align:center;">Init error: ${escapeHtml(
+      e?.message || String(e)
+    )}</div>`;
+    setStatus("Init error");
+  });
