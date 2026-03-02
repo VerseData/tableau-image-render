@@ -12,10 +12,11 @@
   <min-api-version>1.7</min-api-version>
 
   <source-location>
-    <url>https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/index.html</url>
+    <url>https://versedata.github.io/tableau-image-render/index.html</url>
   </source-location>
 
   <permissions>
     <permission>worksheet</permission>
   </permissions>
+
 </dashboard-extension>
