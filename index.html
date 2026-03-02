@@ -11,36 +11,120 @@
     <style>
       html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
       .wrap { height: 100%; display: flex; flex-direction: column; }
+
       .bar {
         display: flex; align-items: center; gap: 8px;
         padding: 8px 10px; border-bottom: 1px solid #e5e5e5;
+        background: #fff;
       }
-      .bar button { padding: 6px 10px; cursor: pointer; }
+      .bar button {
+        padding: 6px 10px; cursor: pointer; border: 1px solid #ddd; border-radius: 8px;
+        background: #fff;
+      }
+      .bar button:active { transform: translateY(1px); }
       .bar input {
-        flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px;
+        flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 8px;
         background: #fafafa;
       }
-      .imgbox { flex: 1; background: #f7f7f7; display: grid; place-items: center; overflow: hidden; }
-      img { max-width: 100%; max-height: 100%; object-fit: contain; }
-      .hint { padding: 12px; color: #555; font-size: 13px; text-align: center; }
-      .small { color: #777; font-size: 12px; margin-top: 6px; }
+      .bar .group { display: flex; gap: 6px; align-items: center; }
+
+      .stage {
+        position: relative;
+        flex: 1;
+        background: #f7f7f7;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        user-select: none;
+      }
+
+      /* Transform wrapper that we pan/zoom */
+      #viewport {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        cursor: grab;
+      }
+      #viewport.dragging { cursor: grabbing; }
+
+      img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        transform-origin: center center;
+        will-change: transform;
+        pointer-events: none; /* we handle gestures on viewport */
+      }
+
+      .hint {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 12px;
+        color: #555;
+        font-size: 13px;
+        text-align: center;
+      }
+      .hint .small { color: #777; font-size: 12px; margin-top: 6px; }
       .err { color: #b00020; }
+
+      /* Fullscreen (in-iframe) mode */
+      .fullscreen {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 999999 !important;
+        background: #111 !important;
+      }
+      .fullscreen .bar { background: #111; border-bottom-color: #333; }
+      .fullscreen .bar button, .fullscreen .bar input {
+        background: #1b1b1b; color: #eee; border-color: #333;
+      }
+      .fullscreen .stage { background: #111; }
+
+      /* Small help text */
+      .kbd {
+        font-size: 11px;
+        color: #666;
+        padding-left: 6px;
+        white-space: nowrap;
+      }
+      .fullscreen .kbd { color: #aaa; }
     </style>
   </head>
 
   <body>
-    <div class="wrap">
+    <div id="root" class="wrap">
       <div class="bar">
-        <button id="refreshBtn" type="button">Refresh</button>
+        <div class="group">
+          <button id="refreshBtn" type="button" title="Refresh selection">Refresh</button>
+        </div>
+
+        <div class="group">
+          <button id="zoomOutBtn" type="button" title="Zoom out (−)">−</button>
+          <button id="zoomInBtn" type="button" title="Zoom in (+)">+</button>
+          <button id="resetBtn" type="button" title="Reset (0)">Reset</button>
+          <button id="fitBtn" type="button" title="Fit to view (F)">Fit</button>
+        </div>
+
+        <div class="group">
+          <button id="fsBtn" type="button" title="Toggle full-screen (Enter)">Full screen</button>
+        </div>
+
         <input id="status" readonly value="Initializing..." />
+        <span class="kbd" title="Shortcuts: + / − / 0 / F / Enter">(+ − 0 F ⏎)</span>
       </div>
 
-      <div class="imgbox">
+      <div id="stage" class="stage">
         <div id="placeholder" class="hint">
           Select a mark to display an image.
-          <div class="small">This extension renders the URL directly in HTML (not Tableau’s native Image object).</div>
+          <div class="small">Wheel/trackpad to zoom • Drag to pan • Double-click to zoom</div>
         </div>
-        <img id="img" alt="Selected image" style="display:none;" />
+
+        <div id="viewport">
+          <img id="img" alt="Selected image" style="display:none;" />
+        </div>
       </div>
     </div>
 
