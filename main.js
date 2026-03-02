@@ -260,8 +260,20 @@ async function refreshAll() {
   try {
     setStatus("Checking selections...");
 
+    let anySelection = false;
+
     for (const ws of dashboardRef.worksheets) {
+      // Detect if there is a selection at all on this sheet
+      const marks = await ws.getSelectedMarksAsync();
+      if (marks?.data?.length && marks.data.some(t => (t.data || []).length > 0)) {
+        anySelection = true;
+      }
+
+      // Your tryGetImageFromWorksheet should now return:
+      // - a real http(s) URL string, OR
+      // - null if none found / nulls / "Null"
       const url = await tryGetImageFromWorksheet(ws);
+
       if (url) {
         showImage(url);
         resetView();
@@ -274,13 +286,19 @@ async function refreshAll() {
       showImage(CONFIG.defaultImageUrl);
       resetView();
       setStatus("Showing default image");
-    } else {
-      showPlaceholder("Select a mark in any worksheet that contains the image URL field.");
+      return;
+    }
+
+    if (!anySelection) {
+      showPlaceholder("Select a row/mark in any worksheet to display an image.");
       setStatus("Waiting for selection");
+    } else {
+      showPlaceholder("The selected row(s) don’t have a valid image URL (many rows are Null). Select a row with a URL.");
+      setStatus("No URL on selection");
     }
   } catch (e) {
     console.error(e);
-    showPlaceholder("Error loading image.", true);
+    showPlaceholder("Unexpected error while reading selections.", true);
     setStatus("Error");
   }
 }
