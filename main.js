@@ -6,6 +6,15 @@
 // - Dedupes URLs
 // - Avoids double initializeAsync()
 // =====================
+if (!window.tableau || !tableau.extensions) {
+  document.getElementById("empty").style.display = "grid";
+  document.getElementById("empty").innerHTML =
+    `<div style="color:#b00020; text-align:center;">
+      Tableau Extensions API not loaded.<br/><br/>
+      Fix: host <b>tableau.extensions.1.latest.min.js</b> in the same GitHub Pages repo and reference it locally.
+    </div>`;
+  throw new Error("Tableau Extensions API not loaded (tableau is undefined)");
+}
 
 let dashboardRef = null;
 let initPromise = null;
