@@ -201,26 +201,59 @@ function onKeyDown(e) {
   else if (e.key === "Enter") toggleFullscreen();
 }
 
+function normalizeUrl(raw) {
+  if (raw == null) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  const lower = s.toLowerCase();
+  if (lower === "null" || lower === "none") return null;
+  if (!/^https?:\/\//i.test(s)) return null;
+  return s;
+}
+
 function findUrlColumnIndex(columns) {
-  const target = CONFIG.urlFieldCaptionOrFieldName;
-  return columns.findIndex(c => c.caption === target || c.fieldName === target);
+  // If you still have CONFIG.urlFieldCaptionOrFieldName, use it; otherwise fall back to auto-detect
+  const target = CONFIG?.urlFieldCaptionOrFieldName;
+
+  // 1) Exact match by caption/fieldName if configured
+  if (target) {
+    const idx = columns.findIndex(c => c.caption === target || c.fieldName === target);
+    if (idx >= 0) return idx;
+  }
+
+  // 2) Auto-detect: first column whose first few values look like URLs
+  // (We can't see values here yet, so just do a name-based heuristic)
+  const nameHints = ["url", "image", "img", "photo", "link", "href"];
+  const idx2 = columns.findIndex(c => {
+    const n = `${c.caption || ""} ${c.fieldName || ""}`.toLowerCase();
+    return nameHints.some(h => n.includes(h));
+  });
+  return idx2; // may be -1
 }
 
 async function tryGetImageFromWorksheet(worksheet) {
   const marks = await worksheet.getSelectedMarksAsync();
   if (!marks?.data?.length) return null;
 
-  const table = marks.data[0];
-  const colIdx = findUrlColumnIndex(table.columns);
-  if (colIdx < 0) return null;
+  // Combine all returned tables (sometimes Tableau returns multiple)
+  for (const table of marks.data) {
+    const columns = table.columns || [];
+    const rows = table.data || [];
+    if (!columns.length || !rows.length) continue;
 
-  if (!table.data?.length) return null;
+    const colIdx = findUrlColumnIndex(columns);
+    if (colIdx < 0) continue;
 
-  const cell = table.data[0][colIdx];
-  const url = cell?.formattedValue || cell?.value;
-  if (!url) return null;
+    // Search across selected marks for first valid URL
+    for (const row of rows) {
+      const cell = row[colIdx];
+      const raw = (cell?.value ?? cell?.formattedValue ?? null);
+      const url = normalizeUrl(raw);
+      if (url) return url;
+    }
+  }
 
-  return String(url).trim();
+  return null;
 }
 
 async function refreshAll() {
