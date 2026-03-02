@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dashboard-extension
+  xmlns="http://tableau.com/api/dashboard-extensions"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://tableau.com/api/dashboard-extensions dashboard-extensions.xsd">
+
+  <name>Image Renderer (No Server)</name>
+  <description>Renders images from a URL in selected marks (HTML img tag).</description>
+
+  <author name="Your Name" email="you@example.com" organization="Your Org" />
+
+  <min-api-version>1.7</min-api-version>
+
+  <source-location>
+    <url>https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/index.html</url>
+  </source-location>
+
+  <permissions>
+    <permission>worksheet</permission>
+  </permissions>
+</dashboard-extension>
