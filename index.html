@@ -5,60 +5,106 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Tableau Image Gallery</title>
 
+    <!-- Tableau Extensions API -->
     <script src="https://unpkg.com/tableau-api@1.7.0/dist/tableau.extensions.1.latest.min.js"></script>
 
     <style>
-      html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-      .root { height: 100%; display: flex; flex-direction: column; background: #fff; }
+      html, body {
+        height: 100%;
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background: #fff;
+      }
+
+      .root {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
 
       .bar {
-        display: flex; gap: 8px; align-items: center;
-        padding: 8px 10px; border-bottom: 1px solid #e5e5e5;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-bottom: 1px solid #e5e5e5;
+        background: #fff;
       }
+
       .bar button {
-        padding: 6px 10px; cursor: pointer; border: 1px solid #ddd; border-radius: 10px; background: #fff;
+        padding: 6px 10px;
+        cursor: pointer;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background: #fff;
       }
-      .bar input {
-        flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 10px; background: #fafafa;
-      }
+
       .bar select {
-        padding: 6px 10px; border: 1px solid #ddd; border-radius: 10px; background: #fff;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background: #fff;
       }
-      .bar .small { color:#666; font-size: 12px; }
 
-      .content { flex: 1; min-height: 0; display: flex; }
+      .bar input {
+        flex: 1;
+        min-width: 180px;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background: #fafafa;
+      }
 
-      .grid {
+      .small {
+        color: #666;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .content {
         flex: 1;
         min-height: 0;
+        position: relative;
+      }
+
+      /* Grid */
+      #grid {
+        height: 100%;
         overflow: auto;
         padding: 10px;
         background: #f7f7f7;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 10px;
         align-content: start;
       }
 
       .card {
-        background: #fff; border: 1px solid #e6e6e6; border-radius: 14px;
-        overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        display: flex; flex-direction: column;
+        background: #fff;
+        border: 1px solid #e6e6e6;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
         cursor: pointer;
       }
+
       .thumb {
-        height: 120px;
+        height: 130px;
         background: #eee;
+        overflow: hidden;
         display: grid;
         place-items: center;
-        overflow: hidden;
       }
+
       .thumb img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
       }
+
       .meta {
         padding: 8px 10px;
         font-size: 12px;
@@ -67,70 +113,21 @@
         justify-content: space-between;
         gap: 8px;
       }
-      .meta .muted { color: #777; }
 
-      .empty {
-        position: absolute;
-        inset: 50px 10px 10px 10px;
-        display: grid;
-        place-items: center;
-        color: #666;
-        text-align: center;
-        padding: 18px;
+      .meta .muted {
+        color: #777;
       }
 
-      /* Viewer overlay */
-      .overlay {
-        position: fixed;
+      /* Empty / Error overlay */
+      #empty {
+        position: absolute;
         inset: 0;
-        background: rgba(0,0,0,0.85);
         display: none;
-        z-index: 999999;
-      }
-      .overlay.open { display: block; }
-
-      .viewerBar {
-        position: absolute;
-        top: 10px; left: 10px; right: 10px;
-        display: flex; gap: 8px; align-items: center;
-      }
-      .viewerBar button {
-        padding: 8px 10px; cursor: pointer; border: 1px solid #444; border-radius: 12px;
-        background: rgba(20,20,20,0.85); color: #eee;
-      }
-      .viewerBar .spacer { flex: 1; }
-      .viewerBar .title {
-        color: #ddd; font-size: 12px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      }
-
-      .stage {
-        position: absolute;
-        inset: 54px 10px 10px 10px;
-        overflow: hidden;
-        border-radius: 16px;
-        background: #111;
-      }
-      #viewport {
-        position: absolute; inset: 0;
-        display: grid; place-items: center;
-        cursor: grab; user-select: none;
-      }
-      #viewport.dragging { cursor: grabbing; }
-      #fullImg {
-        max-width: 95%;
-        max-height: 95%;
-        transform-origin: center center;
-        will-change: transform;
-        pointer-events: none;
-      }
-
-      .pill {
-        padding: 6px 10px;
-        border-radius: 999px;
-        border: 1px solid #444;
-        background: rgba(20,20,20,0.85);
-        color: #ddd;
-        font-size: 12px;
+        place-items: center;
+        padding: 20px;
+        text-align: center;
+        color: #666;
+        background: #fff;
       }
     </style>
   </head>
@@ -138,14 +135,15 @@
   <body>
     <div class="root">
       <div class="bar">
-        <button id="refreshBtn">Refresh</button>
+        <button id="refreshBtn" type="button">Refresh</button>
 
-        <label class="small">URL field:</label>
+        <!-- sheetSelect is injected by main.js before URL field -->
+        <span class="small">URL field:</span>
         <select id="fieldSelect">
           <option value="">Auto-detect</option>
         </select>
 
-        <label class="small">Max:</label>
+        <span class="small">Max:</span>
         <select id="limitSelect">
           <option value="50">50</option>
           <option value="100" selected>100</option>
@@ -157,36 +155,14 @@
       </div>
 
       <div class="content">
-        <div id="grid" class="grid"></div>
-        <div id="empty" class="empty" style="display:none;">
+        <div id="grid"></div>
+        <div id="empty">
           <div>
             <div style="font-size:14px; margin-bottom:6px;">No images found.</div>
             <div style="font-size:12px; color:#777;">
-              Select rows/marks that contain image URLs (Nulls are ignored).
+              Ensure your .trex grants <b>Full Data</b> permission and choose a worksheet + URL field.
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Viewer overlay -->
-    <div id="overlay" class="overlay" aria-hidden="true">
-      <div class="viewerBar">
-        <button id="closeBtn">Close (Esc)</button>
-        <button id="prevBtn">◀ Prev</button>
-        <button id="nextBtn">Next ▶</button>
-        <span id="viewerTitle" class="title"></span>
-        <span class="spacer"></span>
-        <button id="zoomOutBtn">−</button>
-        <button id="zoomInBtn">+</button>
-        <button id="fitBtn">Fit</button>
-        <button id="resetBtn">Reset</button>
-        <span id="countPill" class="pill"></span>
-      </div>
-
-      <div class="stage" id="stage">
-        <div id="viewport">
-          <img id="fullImg" alt="Selected image" />
         </div>
       </div>
     </div>
