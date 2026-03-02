@@ -50,10 +50,17 @@ function showPlaceholder(message, isError = false) {
   placeholderEl.innerHTML = `<div class="${isError ? "err" : ""}">${escapeHtml(message)}</div>`;
 }
 
+// function showImage(url) {
+//   placeholderEl.style.display = "none";
+//   imgEl.style.display = "block";
+//   imgEl.src = appendQueryParam(url, "_ts", String(Date.now()));
+// }
+
 function showImage(url) {
   placeholderEl.style.display = "none";
   imgEl.style.display = "block";
-  imgEl.src = appendQueryParam(url, "_ts", String(Date.now()));
+  imgEl.style.transform = "none";   // disable zoom logic
+  imgEl.src = url;                  // no cache busting
 }
 
 function appendQueryParam(url, key, value) {
