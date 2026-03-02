@@ -18,8 +18,6 @@
       <url>https://versedata.github.io/tableau-image-render/index.html</url>
     </source-location>
 
-    <context-menu>
-      <configure-context-menu-item />
-    </context-menu>
   </dashboard-extension>
 </manifest>
+
