@@ -29,7 +29,6 @@ let dashboardRef = null;
 let initPromise = null;
 
 // ---------- DOM ----------
-const statusEl = document.getElementById("status");
 const emptyEl = document.getElementById("empty");
 const gridEl = document.getElementById("grid");
 
@@ -45,8 +44,6 @@ const fieldSelect = document.getElementById("fieldSelect");
 const searchInput = document.getElementById("searchInput");
 
 const countPill = document.getElementById("countPill");
-const filteredPill = document.getElementById("filteredPill");
-const chunkPill = document.getElementById("chunkPill");
 const pagePill = document.getElementById("pagePill");
 
 // Viewer
@@ -70,7 +67,7 @@ let loading = false;
 
 // ---------- Helpers ----------
 function setStatus(msg) {
-  statusEl.value = msg;
+  console.log("[status]", msg);
 }
 
 function escapeHtml(str) {
@@ -291,8 +288,6 @@ function renderGrid() {
 
   // paginator pills
   countPill.textContent = `${allUrls.length.toLocaleString()} images`;
-  filteredPill.textContent = `${filteredUrls.length.toLocaleString()} shown`;
-  chunkPill.textContent = `Loaded: ${(loadedChunks * CHUNK_SIZE).toLocaleString()} (chunks: ${loadedChunks})`;
   pagePill.textContent = `Page ${currentPage} / ${getTotalPages()}`;
 
   prevPageBtn.disabled = currentPage <= 1;

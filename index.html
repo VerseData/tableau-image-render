@@ -5,329 +5,320 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Tableau Photo Gallery</title>
 
-  <!-- Tableau Extensions API (kept local for GitHub Pages hosting) -->
   <script src="./tableau.extensions.1.latest.min.js"></script>
 
   <style>
-    :root{
-      --bg:#f7f8fb;
-      --panel:#ffffff;
-      --border:#e5e7eb;
-      --text:#111827;
-      --muted:#6b7280;
-      --accent:#2563eb;
-      --danger:#dc2626;
-      --shadow: 0 1px 2px rgba(0,0,0,0.06);
-      --radius: 12px;
-    }
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-      color:var(--text);
-      background:var(--bg);
-      height:100vh;
-      overflow:hidden;
+    :root {
+      --bg:      #1b1e24;
+      --panel:   #252931;
+      --card:    #2d323c;
+      --border:  #3a404d;
+      --text:    #dde1e9;
+      --muted:   #8891a2;
+      --accent:  #1e78c2;
+      --accent-h:#1a6aad;
+      --danger:  #d94040;
+      --shadow:  0 1px 3px rgba(0,0,0,0.4);
+      --radius:  8px;
     }
 
-    .app{
-      height:100vh;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      padding:10px;
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      height: 100vh;
+      overflow: hidden;
     }
 
-    .topbar{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      padding:10px;
-      box-shadow:var(--shadow);
+    .app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 8px;
     }
 
-    .btn{
-      border:1px solid var(--border);
-      background:#fff;
-      border-radius:10px;
-      padding:8px 10px;
-      font-weight:600;
-      cursor:pointer;
-    }
-    .btn:hover{ border-color:#cbd5e1; }
-    .btn.primary{
-      background:var(--accent);
-      color:#fff;
-      border-color:transparent;
-    }
-    .btn.danger{
-      background:#fff;
-      color:var(--danger);
-      border-color:#fecaca;
-    }
-    .btn:disabled{
-      opacity:.55;
-      cursor:not-allowed;
+    /* ── Top bar ────────────────────────────────── */
+    .topbar {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;   /* buttons bottom-align with selects */
+      flex-wrap: wrap;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      box-shadow: var(--shadow);
     }
 
-    label{
-      font-size:12px;
-      color:var(--muted);
-      display:block;
-      margin-bottom:4px;
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      line-height: 1.4;
     }
-    select, input{
-      border:1px solid var(--border);
-      border-radius:10px;
-      padding:8px 10px;
-      background:#fff;
-      min-width: 180px;
-      outline:none;
-    }
-    input{ min-width: 240px; }
+    .btn:hover { background: #363c4a; border-color: #4a5260; }
+    .btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+    .btn.primary:hover { background: var(--accent-h); }
+    .btn.danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+    .btn.danger:hover { background: rgba(217,64,64,0.12); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
 
-    .control{
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-    }
-
-    .statusRow{
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      padding:10px;
-      box-shadow:var(--shadow);
+    label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: block;
+      margin-bottom: 4px;
     }
 
-    textarea{
-      width:100%;
-      border:1px solid var(--border);
-      border-radius:10px;
-      padding:10px;
-      resize:none;
-      min-height:54px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
-      font-size:12px;
-      color:#0f172a;
-      background:#fff;
+    select, input {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      background: var(--card);
+      color: var(--text);
+      font-size: 13px;
+      min-width: 170px;
+      outline: none;
+      line-height: 1.4;
+    }
+    select option { background: var(--card); color: var(--text); }
+    select:focus, input:focus { border-color: var(--accent); }
+    input { min-width: 200px; }
+    input::placeholder { color: var(--muted); }
+    input[type="search"]::-webkit-search-cancel-button { filter: invert(1) opacity(0.5); }
+
+    .control { display: flex; flex-direction: column; }
+
+    /* ── Paginator bar ──────────────────────────── */
+    .paginatorBar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      box-shadow: var(--shadow);
     }
 
-    /* Paginator right after message box */
-    .paginator{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-      border:1px solid var(--border);
-      border-radius:10px;
-      padding:8px 10px;
-      background:#fff;
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
     }
 
-    .pills{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:center;
-      color:var(--muted);
-      font-size:12px;
-    }
-    .pill{
-      border:1px solid var(--border);
-      border-radius:999px;
-      padding:4px 10px;
-      background:#f9fafb;
-      color:#334155;
-      font-size:12px;
-      white-space:nowrap;
+    .pill {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px 10px;
+      background: var(--card);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
     }
 
-    .pageControls{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      flex-wrap:wrap;
+    .pageControls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
-    .gridWrap{
-      flex:1;
-      min-height:0;
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:auto;
-      padding:10px;
-      position:relative;
+    /* ── Image grid ─────────────────────────────── */
+    .gridWrap {
+      flex: 1;
+      min-height: 0;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: auto;
+      padding: 10px;
+      position: relative;
     }
 
-    .grid{
-      display:grid;
+    .grid {
+      display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap:10px;
+      gap: 10px;
     }
 
-    .card{
-      border:1px solid var(--border);
-      border-radius:12px;
-      overflow:hidden;
-      background:#fff;
-      cursor:pointer;
-      position:relative;
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--card);
+      cursor: pointer;
+      position: relative;
     }
-    .thumb{
+    .card:hover { border-color: var(--accent); }
+
+    .thumb {
       aspect-ratio: 4 / 3;
-      width:100%;
-      position:relative;
-      background:#f1f5f9;
+      width: 100%;
+      position: relative;
+      background: #1e2229;
     }
-    .thumb img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
-    .badge{
-      position:absolute;
-      top:8px;
-      left:8px;
-      background:rgba(17,24,39,0.75);
-      color:#fff;
-      font-size:11px;
-      border-radius:999px;
-      padding:4px 8px;
-    }
-    .caption{
-      position:absolute;
-      left:8px;
-      right:8px;
-      bottom:8px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-      background:rgba(255,255,255,0.88);
-      border:1px solid rgba(229,231,235,0.9);
-      border-radius:10px;
-      padding:6px 8px;
-    }
-    .caption .text{
-      font-size:12px;
-      color:#334155;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-    .iconbtn{
-      border:1px solid var(--border);
-      background:#fff;
-      border-radius:8px;
-      padding:2px 8px;
-      cursor:pointer;
-      font-weight:700;
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
-    .empty{
-      position:absolute;
-      inset:10px;
-      display:none;
-      place-items:center;
-      text-align:center;
-      padding:16px;
-      border:1px dashed var(--border);
-      border-radius:12px;
-      color:var(--muted);
-      background:#fff;
+    .badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: rgba(0,0,0,0.65);
+      color: #fff;
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 3px 7px;
     }
 
-    /* Viewer overlay (fit-to-widget only) */
-    .overlay{
-      position:fixed;
-      inset:0;
-      background:rgba(15,23,42,0.72);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding:16px;
-      z-index:50;
+    .caption {
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      background: rgba(27,30,36,0.88);
+      border: 1px solid rgba(58,64,77,0.8);
+      border-radius: 6px;
+      padding: 4px 8px;
     }
-    .overlay.open{ display:flex; }
+    .caption .text {
+      font-size: 11px;
+      color: #a8b2c1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
-    .viewer{
-      width:min(1100px, 98vw);
-      height:min(780px, 92vh);
-      background:#0b1220;
-      border-radius:16px;
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-      border:1px solid rgba(255,255,255,0.12);
+    .iconbtn {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      border-radius: 5px;
+      padding: 2px 7px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 12px;
     }
-    .viewerTop{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:10px 12px;
-      gap:10px;
-      background:rgba(255,255,255,0.06);
-      color:#e5e7eb;
-      font-size:12px;
+    .iconbtn:hover { color: var(--text); border-color: #4a5260; }
+
+    /* ── Empty state ────────────────────────────── */
+    .empty {
+      position: absolute;
+      inset: 10px;
+      display: none;
+      place-items: center;
+      text-align: center;
+      padding: 16px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      background: var(--panel);
     }
-    .viewerTop .left{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-width:0;
+
+    /* ── Viewer overlay ─────────────────────────── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
     }
-    .viewerTitle{
-      font-weight:700;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
+    .overlay.open { display: flex; }
+
+    .viewer {
+      width: min(1100px, 98vw);
+      height: min(780px, 92vh);
+      background: #0d1117;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #30363d;
+    }
+
+    .viewerTop {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      gap: 10px;
+      background: rgba(255,255,255,0.05);
+      color: #c9d1d9;
+      font-size: 12px;
+    }
+    .viewerTop .left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .viewerTitle {
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       max-width: 52vw;
     }
-    .viewerBody{
-      flex:1;
-      min-height:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:10px;
+    .viewerBody {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
     }
-    .viewerBody img{
-      width:100%;
-      height:100%;
-      object-fit:contain; /* Fit-only */
-      display:block;
-      background:#0b1220;
+    .viewerBody img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #0d1117;
     }
-    .viewerTop .actions{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:wrap;
+    .viewerTop .actions { display: flex; gap: 8px; align-items: center; }
+    .viewerTop .actions .btn {
+      padding: 5px 10px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #c9d1d9;
     }
-    .viewerTop .actions .btn{
-      padding:6px 10px;
-      border-radius:10px;
-      background:rgba(255,255,255,0.10);
-      border:1px solid rgba(255,255,255,0.18);
-      color:#e5e7eb;
-    }
+    .viewerTop .actions .btn:hover { background: rgba(255,255,255,0.14); }
   </style>
 </head>
 
 <body>
   <div class="app">
+
+    <!-- Top bar: buttons + selectors all bottom-aligned -->
     <div class="topbar">
       <button id="refreshBtn" class="btn primary" type="button">Refresh</button>
       <button id="clearBtn" class="btn danger" type="button">Clear Cache</button>
@@ -350,33 +341,28 @@
       </div>
     </div>
 
-    <div class="statusRow">
-      <textarea id="status" readonly>Initializing…</textarea>
-
-      <!-- Required: paginator right after message box -->
-      <div class="paginator" id="paginator">
-        <div class="pills">
-          <span class="pill" id="countPill">0 images</span>
-          <span class="pill" id="filteredPill">0 shown</span>
-          <span class="pill" id="chunkPill">Loaded: 0</span>
-          <span class="pill" id="pagePill">Page 1 / 1</span>
-        </div>
-
-        <div class="pageControls">
-          <button id="prevPageBtn" class="btn" type="button">Prev</button>
-          <button id="nextPageBtn" class="btn" type="button">Next</button>
-          <button id="loadMoreBtn" class="btn" type="button">Load more</button>
-        </div>
+    <!-- Paginator: image count + page + navigation -->
+    <div class="paginatorBar" id="paginator">
+      <div class="pills">
+        <span class="pill" id="countPill">0 images</span>
+        <span class="pill" id="pagePill">Page 1 / 1</span>
+      </div>
+      <div class="pageControls">
+        <button id="prevPageBtn" class="btn" type="button">Prev</button>
+        <button id="nextPageBtn" class="btn" type="button">Next</button>
+        <button id="loadMoreBtn" class="btn" type="button">Load more</button>
       </div>
     </div>
 
+    <!-- Image grid -->
     <div class="gridWrap" id="gridWrap">
       <div class="empty" id="empty"></div>
       <div class="grid" id="grid"></div>
     </div>
+
   </div>
 
-  <!-- Viewer overlay -->
+  <!-- Full-screen viewer -->
   <div class="overlay" id="overlay" aria-hidden="true">
     <div class="viewer" role="dialog" aria-modal="true">
       <div class="viewerTop">
@@ -385,7 +371,7 @@
           <button class="btn" id="vPrevBtn" type="button">◀ Prev</button>
           <button class="btn" id="vNextBtn" type="button">Next ▶</button>
           <div class="viewerTitle" id="viewerTitle">—</div>
-          <div id="viewerCount" style="color:#cbd5e1;">0 / 0</div>
+          <div id="viewerCount" style="color:#8b949e;">0 / 0</div>
         </div>
         <div class="actions">
           <button class="btn" id="openTabBtn" type="button">Open ↗</button>
