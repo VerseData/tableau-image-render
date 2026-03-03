@@ -381,7 +381,6 @@ async function loadChunk({ reset }) {
     }
 
     // De-dupe
-    const before = allUrls.length;
     const seen = new Set(allUrls);
     for (const u of extracted) {
       if (seen.has(u)) continue;
@@ -389,14 +388,15 @@ async function loadChunk({ reset }) {
       allUrls.push(u);
     }
 
-    // Only count a chunk if it increased unique urls
-    if (allUrls.length > before) loadedChunks += 1;
+    // Always advance the chunk counter so the next load requests a larger row window
+    loadedChunks += 1;
 
-    setStatus(`Loaded ${allUrls.length.toLocaleString()} unique URL(s).`);
+    const candidateNames = idxs.map(i => columns[i]?.fieldName || columns[i]?.caption || `col[${i}]`).join(", ");
+    setStatus(`Rows: ${rows.length} | Cols: ${columns.length} | Scanning: [${candidateNames || "none"}]\nLoaded ${allUrls.length.toLocaleString()} unique URL(s).`);
     applySearch();
 
-    // If this "chunk" didn’t add any unique URLs, likely no more data in the view
-    if (allUrls.length === before) {
+    // Only stop when the API returned fewer rows than requested — data exhausted
+    if (rows.length < maxRows) {
       loadMoreBtn.disabled = true;
       loadMoreBtn.textContent = "No more in view";
     }
