@@ -102,17 +102,26 @@
 
     .control { display: flex; flex-direction: column; }
 
-    /* ── Paginator row (inside topbar) ─────────── */
-    .topbarPaginator {
+    /* ── Second row: Search + paginator on one line ── */
+    .topbarRow2 {
       flex-basis: 100%;          /* forces onto its own line inside the topbar flex */
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 10px;
+      flex-wrap: nowrap;
       border-top: 1px solid var(--border);
       padding-top: 8px;
       margin-top: 4px;
+    }
+    .topbarRow2 .searchControl {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbarRow2 .searchControl input {
+      width: 100%;
+      min-width: 0;
     }
 
     .pills {
@@ -334,13 +343,12 @@
         </select>
       </div>
 
-      <div class="control">
-        <label for="searchInput">Search</label>
-        <input id="searchInput" type="search" placeholder="Filter URLs…" />
-      </div>
-
-      <!-- Paginator inline — full-width second row inside the topbar -->
-      <div class="topbarPaginator" id="paginator">
+      <!-- Second row: Search fills empty space, pills + buttons on the right -->
+      <div class="topbarRow2" id="paginator">
+        <div class="searchControl">
+          <label for="searchInput">Search</label>
+          <input id="searchInput" type="search" placeholder="Filter URLs…" />
+        </div>
         <div class="pills">
           <span class="pill" id="countPill">0 images</span>
           <span class="pill" id="pagePill">Page 1 / 1</span>
@@ -382,6 +390,6 @@
     </div>
   </div>
 
-  <script src="./main.js?v=3"></script>
+  <script src="./main.js?v=4"></script>
 </body>
 </html>
