@@ -14,9 +14,7 @@
     <min-api-version>1.7</min-api-version>
 
     <!-- Icon shown in Tableau's Extension Gallery -->
-    <icon>
-      <url>https://versedata.github.io/tableau-image-render/icon.png</url>
-    </icon>
+    <icon>https://versedata.github.io/tableau-image-render/icon.png</icon>
 
     <website>
       <url>https://versedata.github.io/tableau-image-render/index.html</url>
