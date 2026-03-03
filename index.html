@@ -1,360 +1,402 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Tableau Photo Gallery</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tableau Photo Gallery</title>
 
-    <!-- Put tableau.extensions.1.latest.min.js in the same GitHub Pages folder -->
-    <script src="./tableau.extensions.1.latest.min.js"></script>
+  <!-- Tableau Extensions API (kept local for GitHub Pages hosting) -->
+  <script src="./tableau.extensions.1.latest.min.js"></script>
 
-    <style>
-      :root{
-        --bg:#f6f7f9;
-        --card:#fff;
-        --border:#e7e7e7;
-        --text:#222;
-        --muted:#666;
-        --shadow:0 1px 6px rgba(0,0,0,0.06);
-        --shadowHover:0 10px 24px rgba(0,0,0,0.12);
-      }
+  <style>
+    :root{
+      --bg:#f7f8fb;
+      --panel:#ffffff;
+      --border:#e5e7eb;
+      --text:#111827;
+      --muted:#6b7280;
+      --accent:#2563eb;
+      --danger:#dc2626;
+      --shadow: 0 1px 2px rgba(0,0,0,0.06);
+      --radius: 12px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      background:var(--bg);
+      height:100vh;
+      overflow:hidden;
+    }
 
-      html, body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--text); }
-      body { background:#fff; }
+    .app{
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:10px;
+    }
 
-      .root{ height:100%; display:flex; flex-direction:column; }
+    .topbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:10px;
+      box-shadow:var(--shadow);
+    }
 
-      /* Top bar */
-      .bar{
-        display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-        padding:10px 12px;
-        border-bottom:1px solid var(--border);
-        background:#fff;
-      }
-      .bar .group{ display:flex; align-items:center; gap:8px; }
-      .bar .small{ color:var(--muted); font-size:12px; white-space:nowrap; }
+    .btn{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:10px;
+      padding:8px 10px;
+      font-weight:600;
+      cursor:pointer;
+    }
+    .btn:hover{ border-color:#cbd5e1; }
+    .btn.primary{
+      background:var(--accent);
+      color:#fff;
+      border-color:transparent;
+    }
+    .btn.danger{
+      background:#fff;
+      color:var(--danger);
+      border-color:#fecaca;
+    }
+    .btn:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
 
-      .bar button{
-        padding:8px 10px;
-        border:1px solid #ddd;
-        border-radius:12px;
-        background:#fff;
-        cursor:pointer;
-      }
-      .bar button.primary{
-        border-color:#cfd6ff;
-        background:#f3f5ff;
-      }
-      .bar button:disabled{ opacity:0.55; cursor:not-allowed; }
+    label{
+      font-size:12px;
+      color:var(--muted);
+      display:block;
+      margin-bottom:4px;
+    }
+    select, input{
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:8px 10px;
+      background:#fff;
+      min-width: 180px;
+      outline:none;
+    }
+    input{ min-width: 240px; }
 
-      .bar select, .bar input[type="text"]{
-        padding:8px 10px;
-        border:1px solid #ddd;
-        border-radius:12px;
-        background:#fff;
-      }
-      .bar input[type="text"]{ width:240px; }
+    .control{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
 
-      .bar .status{
-        flex:1;
-        min-width:200px;
-        padding:8px 10px;
-        border:1px solid #ddd;
-        border-radius:12px;
-        background:#fafafa;
-        color:#333;
-      }
+    .statusRow{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:10px;
+      box-shadow:var(--shadow);
+    }
 
-      /* Main */
-      .content{
-        flex:1;
-        min-height:0;
-        display:flex;
-        flex-direction:column;
-        background:var(--bg);
-        position:relative;
-      }
+    textarea{
+      width:100%;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:10px;
+      resize:none;
+      min-height:54px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-size:12px;
+      color:#0f172a;
+      background:#fff;
+    }
 
-      /* Info row */
-      .subbar{
-        display:flex; align-items:center; justify-content:space-between;
-        gap:10px; flex-wrap:wrap;
-        padding:10px 12px;
-        border-bottom:1px solid var(--border);
-        background:#fff;
-      }
-      .subbar .left{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-      .pill{
-        padding:6px 10px;
-        border:1px solid #ddd;
-        border-radius:999px;
-        background:#fff;
-        color:#333;
-        font-size:12px;
-      }
+    /* Paginator right after message box */
+    .paginator{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:8px 10px;
+      background:#fff;
+    }
 
-      /* Grid */
-      .gridWrap{
-        flex:1;
-        min-height:0;
-        overflow:auto;
-        padding:12px;
-      }
-      #grid{
-        display:grid;
-        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-        gap:12px;
-        align-content:start;
-      }
+    .pills{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .pill{
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:4px 10px;
+      background:#f9fafb;
+      color:#334155;
+      font-size:12px;
+      white-space:nowrap;
+    }
 
-      .card{
-        background:var(--card);
-        border:1px solid var(--border);
-        border-radius:16px;
-        overflow:hidden;
-        box-shadow:var(--shadow);
-        cursor:pointer;
-        transition: transform 120ms ease, box-shadow 120ms ease;
-      }
-      .card:hover{
-        transform: translateY(-2px);
-        box-shadow: var(--shadowHover);
-      }
+    .pageControls{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
 
-      .thumb{
-        position:relative;
-        width:100%;
-        aspect-ratio: 4 / 3;
-        background:#e9edf2;
-        overflow:hidden;
-      }
-      .thumb img{
-        width:100%;
-        height:100%;
-        object-fit:cover;
-        display:block;
-      }
+    .gridWrap{
+      flex:1;
+      min-height:0;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:auto;
+      padding:10px;
+      position:relative;
+    }
 
-      .badge{
-        position:absolute;
-        top:10px;
-        left:10px;
-        padding:6px 10px;
-        border-radius:999px;
-        font-size:12px;
-        color:#fff;
-        background: rgba(0,0,0,0.55);
-        backdrop-filter: blur(4px);
-      }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap:10px;
+    }
 
-      .caption{
-        position:absolute;
-        left:0; right:0; bottom:0;
-        padding:10px;
-        font-size:12px;
-        color:#fff;
-        background: linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0));
-        display:flex;
-        justify-content:space-between;
-        align-items:flex-end;
-        gap:10px;
-      }
-      .caption .text{
-        overflow:hidden;
-        white-space:nowrap;
-        text-overflow:ellipsis;
-        opacity:0.95;
-      }
-      .iconbtn{
-        width:28px; height:28px;
-        border-radius:10px;
-        border:1px solid rgba(255,255,255,0.35);
-        background: rgba(0,0,0,0.35);
-        color:#fff;
-        display:grid;
-        place-items:center;
-        cursor:pointer;
-      }
-      .iconbtn:hover{ background: rgba(0,0,0,0.55); }
+    .card{
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+      cursor:pointer;
+      position:relative;
+    }
+    .thumb{
+      aspect-ratio: 4 / 3;
+      width:100%;
+      position:relative;
+      background:#f1f5f9;
+    }
+    .thumb img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .badge{
+      position:absolute;
+      top:8px;
+      left:8px;
+      background:rgba(17,24,39,0.75);
+      color:#fff;
+      font-size:11px;
+      border-radius:999px;
+      padding:4px 8px;
+    }
+    .caption{
+      position:absolute;
+      left:8px;
+      right:8px;
+      bottom:8px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      background:rgba(255,255,255,0.88);
+      border:1px solid rgba(229,231,235,0.9);
+      border-radius:10px;
+      padding:6px 8px;
+    }
+    .caption .text{
+      font-size:12px;
+      color:#334155;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .iconbtn{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:8px;
+      padding:2px 8px;
+      cursor:pointer;
+      font-weight:700;
+    }
 
-      /* Bottom */
-      .footer{
-        padding:10px 12px;
-        border-top:1px solid var(--border);
-        background:#fff;
-        display:flex;
-        justify-content:center;
-        gap:10px;
-      }
+    .empty{
+      position:absolute;
+      inset:10px;
+      display:none;
+      place-items:center;
+      text-align:center;
+      padding:16px;
+      border:1px dashed var(--border);
+      border-radius:12px;
+      color:var(--muted);
+      background:#fff;
+    }
 
-      /* Empty/Error overlay */
-      #empty{
-        position:absolute;
-        inset:0;
-        display:none;
-        place-items:center;
-        padding:20px;
-        text-align:center;
-        color:#666;
-        background:#fff;
-        z-index:10;
-      }
-      .errorText{ color:#b00020; }
+    /* Viewer overlay (fit-to-widget only) */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.72);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:50;
+    }
+    .overlay.open{ display:flex; }
 
-      /* Viewer (no zoom/pan) */
-      #overlay{
-        position:fixed;
-        inset:0;
-        background: rgba(0,0,0,0.86);
-        display:none;
-        z-index:999999;
-      }
-      #overlay.open{ display:block; }
+    .viewer{
+      width:min(1100px, 98vw);
+      height:min(780px, 92vh);
+      background:#0b1220;
+      border-radius:16px;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      border:1px solid rgba(255,255,255,0.12);
+    }
+    .viewerTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:10px 12px;
+      gap:10px;
+      background:rgba(255,255,255,0.06);
+      color:#e5e7eb;
+      font-size:12px;
+    }
+    .viewerTop .left{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .viewerTitle{
+      font-weight:700;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      max-width: 52vw;
+    }
+    .viewerBody{
+      flex:1;
+      min-height:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px;
+    }
+    .viewerBody img{
+      width:100%;
+      height:100%;
+      object-fit:contain; /* Fit-only */
+      display:block;
+      background:#0b1220;
+    }
+    .viewerTop .actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .viewerTop .actions .btn{
+      padding:6px 10px;
+      border-radius:10px;
+      background:rgba(255,255,255,0.10);
+      border:1px solid rgba(255,255,255,0.18);
+      color:#e5e7eb;
+    }
+  </style>
+</head>
 
-      .viewerBar{
-        position:absolute;
-        top:10px; left:10px; right:10px;
-        display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-      }
-      .viewerBar button{
-        padding:8px 10px;
-        border:1px solid #444;
-        border-radius:12px;
-        background: rgba(20,20,20,0.85);
-        color:#eee;
-        cursor:pointer;
-      }
-      .viewerBar .spacer{ flex:1; }
-      .viewerBar .title{
-        color:#ddd;
-        font-size:12px;
-        max-width:40vw;
-        overflow:hidden;
-        text-overflow:ellipsis;
-        white-space:nowrap;
-      }
-      .viewerBar .pillDark{
-        padding:6px 10px;
-        border-radius:999px;
-        border:1px solid #444;
-        background: rgba(20,20,20,0.85);
-        color:#ddd;
-        font-size:12px;
-      }
+<body>
+  <div class="app">
+    <div class="topbar">
+      <button id="refreshBtn" class="btn primary" type="button">Refresh</button>
+      <button id="clearBtn" class="btn danger" type="button">Clear Cache</button>
 
-      .stage{
-        position:absolute;
-        inset:54px 10px 10px 10px;
-        overflow:hidden;
-        border-radius:16px;
-        background:#111;
-
-        display:grid;
-        place-items:center;
-      }
-
-      /* Fit to stage without transforms */
-      #fullImg{
-        width:100%;
-        height:100%;
-        object-fit:contain; /* <= key: fit inside without cropping */
-        display:block;
-        background:#111;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="root">
-      <div class="bar">
-        <div class="group">
-          <button id="refreshBtn" class="primary" type="button">Refresh</button>
-          <button id="clearBtn" type="button">Clear Cache</button>
-        </div>
-
-        <div class="group">
-          <span class="small">Sheet:</span>
-          <select id="sheetSelect"></select>
-        </div>
-
-        <div class="group">
-          <span class="small">URL field:</span>
-          <select id="fieldSelect">
-            <option value="">Auto-detect</option>
-          </select>
-        </div>
-
-        <div class="group">
-          <span class="small">Chunk:</span>
-          <select id="chunkSelect">
-            <option value="1000">1,000</option>
-            <option value="2500">2,500</option>
-            <option value="5000" selected>5,000</option>
-            <option value="10000">10,000</option>
-          </select>
-        </div>
-
-        <div class="group">
-          <span class="small">Page size:</span>
-          <select id="pageSizeSelect">
-            <option value="100">100</option>
-            <option value="200" selected>200</option>
-            <option value="300">300</option>
-            <option value="500">500</option>
-          </select>
-        </div>
-
-        <div class="group">
-          <span class="small">Search:</span>
-          <input id="searchInput" type="text" placeholder="Search thumbnails…" />
-        </div>
-
-        <input id="status" class="status" readonly value="Initializing…" />
+      <div class="control">
+        <label for="sheetSelect">Sheet</label>
+        <select id="sheetSelect"></select>
       </div>
 
-      <div class="content">
-        <div class="subbar">
-          <div class="left">
-            <span id="countPill" class="pill">0 images</span>
-            <span id="filteredPill" class="pill">0 shown</span>
-            <span id="chunkPill" class="pill">Loaded: 0</span>
-          </div>
-          <div class="left">
-            <span id="pagePill" class="pill">Page 1</span>
-          </div>
+      <div class="control">
+        <label for="fieldSelect">URL field</label>
+        <select id="fieldSelect">
+          <option value="">Auto-detect</option>
+        </select>
+      </div>
+
+      <div class="control">
+        <label for="searchInput">Search</label>
+        <input id="searchInput" type="search" placeholder="Filter URLs…" />
+      </div>
+    </div>
+
+    <div class="statusRow">
+      <textarea id="status" readonly>Initializing…</textarea>
+
+      <!-- Required: paginator right after message box -->
+      <div class="paginator" id="paginator">
+        <div class="pills">
+          <span class="pill" id="countPill">0 images</span>
+          <span class="pill" id="filteredPill">0 shown</span>
+          <span class="pill" id="chunkPill">Loaded: 0</span>
+          <span class="pill" id="pagePill">Page 1 / 1</span>
         </div>
 
-        <div id="empty"></div>
-
-        <div id="gridWrap" class="gridWrap">
-          <div id="grid"></div>
-        </div>
-
-        <div class="footer">
-          <button id="prevPageBtn" type="button">Prev</button>
-          <button id="nextPageBtn" type="button">Next</button>
-          <button id="loadMoreBtn" type="button">Load more</button>
+        <div class="pageControls">
+          <button id="prevPageBtn" class="btn" type="button">Prev</button>
+          <button id="nextPageBtn" class="btn" type="button">Next</button>
+          <button id="loadMoreBtn" class="btn" type="button">Load more</button>
         </div>
       </div>
     </div>
 
-    <!-- Viewer (fit only) -->
-    <div id="overlay" aria-hidden="true">
-      <div class="viewerBar">
-        <button id="closeBtn" type="button">Close (Esc)</button>
-        <button id="vPrevBtn" type="button">◀ Prev</button>
-        <button id="vNextBtn" type="button">Next ▶</button>
-        <span id="viewerTitle" class="title"></span>
-        <span class="spacer"></span>
-        <span id="viewerCount" class="pillDark"></span>
-        <button id="openTabBtn" type="button">Open ↗</button>
-      </div>
+    <div class="gridWrap" id="gridWrap">
+      <div class="empty" id="empty"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
 
-      <div class="stage">
-        <img id="fullImg" alt="Selected image" />
+  <!-- Viewer overlay -->
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="viewer" role="dialog" aria-modal="true">
+      <div class="viewerTop">
+        <div class="left">
+          <button class="btn" id="closeBtn" type="button">Close (Esc)</button>
+          <button class="btn" id="vPrevBtn" type="button">◀ Prev</button>
+          <button class="btn" id="vNextBtn" type="button">Next ▶</button>
+          <div class="viewerTitle" id="viewerTitle">—</div>
+          <div id="viewerCount" style="color:#cbd5e1;">0 / 0</div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="openTabBtn" type="button">Open ↗</button>
+        </div>
+      </div>
+      <div class="viewerBody">
+        <img id="fullImg" alt="Full image" />
       </div>
     </div>
+  </div>
 
-    <script type="module" src="./main.js"></script>
-  </body>
+  <script src="./main.js"></script>
+</body>
 </html>

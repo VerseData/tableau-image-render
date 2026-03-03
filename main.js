@@ -1,49 +1,47 @@
-// Tableau Photo Gallery (Chunked + Pagination) - Viewer fits to widget, no zoom/pan.
+// Tableau Photo Gallery (Chunked + Pagination)
+// Requirements implemented:
+// - Chunk size fixed to 1000
+// - Page size fixed to 100
+// - Paginator right after message box shows loaded/shown/page
+// - Clear Cache does a hard reset + reload so images always come back
+// - Viewer is "fit-only" (CSS object-fit: contain). No zoom/pan.
+
+"use strict";
+
+const CHUNK_SIZE = 1000;
+const PAGE_SIZE = 100;
 
 if (!window.tableau || !tableau.extensions) {
   const empty = document.getElementById("empty");
   empty.style.display = "grid";
   empty.innerHTML = `
-    <div class="errorText">
-      Tableau Extensions API not loaded (tableau is undefined).<br/><br/>
-      Fix: host <b>tableau.extensions.1.latest.min.js</b> in the same GitHub Pages repo and load it via
-      <code>&lt;script src="./tableau.extensions.1.latest.min.js"&gt;&lt;/script&gt;</code>.
-    </div>
-  `;
+    <div style="max-width:720px">
+      <div style="font-weight:800; font-size:14px; margin-bottom:8px;">Tableau Extensions API not loaded</div>
+      <div style="font-size:12px; color:#475569;">
+        Fix: host <code>tableau.extensions.1.latest.min.js</code> in this same repo and load it via
+        <code>&lt;script src="./tableau.extensions.1.latest.min.js"&gt;&lt;/script&gt;</code>.
+      </div>
+    </div>`;
   throw new Error("Tableau Extensions API not loaded");
 }
 
 let dashboardRef = null;
 let initPromise = null;
 
-async function ensureInitialized() {
-  if (dashboardRef) return dashboardRef;
-  if (!initPromise) {
-    initPromise = (async () => {
-      await tableau.extensions.initializeAsync();
-      dashboardRef = tableau.extensions.dashboardContent.dashboard;
-      return dashboardRef;
-    })();
-  }
-  return initPromise;
-}
-
 // ---------- DOM ----------
 const statusEl = document.getElementById("status");
 const emptyEl = document.getElementById("empty");
-const gridWrapEl = document.getElementById("gridWrap");
 const gridEl = document.getElementById("grid");
 
 const refreshBtn = document.getElementById("refreshBtn");
 const clearBtn = document.getElementById("clearBtn");
+
 const loadMoreBtn = document.getElementById("loadMoreBtn");
 const prevPageBtn = document.getElementById("prevPageBtn");
 const nextPageBtn = document.getElementById("nextPageBtn");
 
 const sheetSelect = document.getElementById("sheetSelect");
 const fieldSelect = document.getElementById("fieldSelect");
-const chunkSelect = document.getElementById("chunkSelect");
-const pageSizeSelect = document.getElementById("pageSizeSelect");
 const searchInput = document.getElementById("searchInput");
 
 const countPill = document.getElementById("countPill");
@@ -66,17 +64,30 @@ let allUrls = [];
 let filteredUrls = [];
 let currentPage = 1;
 let viewerIndex = 0;
-
 let loadedChunks = 0;
 let lastCacheKey = null;
 let loading = false;
 
 // ---------- Helpers ----------
-function setStatus(msg) { statusEl.value = msg; }
-function escapeHtml(str) {
-  return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+function setStatus(msg) {
+  statusEl.value = msg;
 }
-function safeHost(url) { try { return new URL(url).host; } catch { return ""; } }
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function safeHost(url) {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "";
+  }
+}
+
 function normalizeUrl(raw) {
   if (raw == null) return null;
   const s = String(raw).trim();
@@ -86,55 +97,77 @@ function normalizeUrl(raw) {
   if (!/^https?:\/\//i.test(s)) return null;
   return s;
 }
-function showError(html) { emptyEl.style.display = "grid"; emptyEl.innerHTML = html; }
-function hideError() { emptyEl.style.display = "none"; emptyEl.innerHTML = ""; }
 
-function getChunkSize() {
-  const n = parseInt(chunkSelect.value, 10);
-  return Number.isFinite(n) ? n : 5000;
+function showError(html) {
+  emptyEl.style.display = "grid";
+  emptyEl.innerHTML = html;
 }
-function getPageSize() {
-  const n = parseInt(pageSizeSelect.value, 10);
-  return Number.isFinite(n) ? n : 200;
+
+function hideError() {
+  emptyEl.style.display = "none";
+  emptyEl.innerHTML = "";
 }
-function getChosenSheet() { return sheetSelect.value || null; }
-function getChosenField() { return fieldSelect.value || null; }
+
+function getChosenSheet() {
+  return sheetSelect.value || null;
+}
+
+function getChosenField() {
+  return fieldSelect.value || null;
+}
 
 function getTotalPages() {
-  const ps = getPageSize();
-  return Math.max(1, Math.ceil(filteredUrls.length / ps));
+  return Math.max(1, Math.ceil(filteredUrls.length / PAGE_SIZE));
 }
+
 function clampPage(p) {
   return Math.max(1, Math.min(getTotalPages(), p));
 }
+
 function getPageSlice() {
-  const ps = getPageSize();
-  const start = (currentPage - 1) * ps;
-  return filteredUrls.slice(start, start + ps);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  return filteredUrls.slice(start, start + PAGE_SIZE);
 }
 
-// ---------- UI ----------
+// ---------- Tableau init ----------
+async function ensureInitialized() {
+  if (dashboardRef) return dashboardRef;
+
+  if (!initPromise) {
+    initPromise = (async () => {
+      await tableau.extensions.initializeAsync();
+      dashboardRef = tableau.extensions.dashboardContent.dashboard;
+      return dashboardRef;
+    })();
+  }
+
+  return initPromise;
+}
+
+// ---------- UI wiring ----------
 function fillSheetSelect() {
   const sheets = dashboardRef?.worksheets || [];
   const current = sheetSelect.value;
 
   sheetSelect.innerHTML = "";
-  sheets.forEach(ws => {
+
+  sheets.forEach((ws) => {
     const opt = document.createElement("option");
     opt.value = ws.name;
     opt.textContent = ws.name;
     sheetSelect.appendChild(opt);
   });
 
-  if (current && sheets.some(s => s.name === current)) sheetSelect.value = current;
+  if (current && sheets.some((s) => s.name === current)) sheetSelect.value = current;
   else if (sheets.length) sheetSelect.value = sheets[0].name;
 }
 
 function buildFieldOptions(columns) {
   const current = fieldSelect.value;
+
   fieldSelect.innerHTML = `<option value="">Auto-detect</option>`;
 
-  columns.forEach(c => {
+  columns.forEach((c) => {
     const label = c.fieldName || c.caption || "";
     if (!label) return;
     const opt = document.createElement("option");
@@ -143,26 +176,32 @@ function buildFieldOptions(columns) {
     fieldSelect.appendChild(opt);
   });
 
+  // keep selection if still valid
   if (current) fieldSelect.value = current;
 }
 
 function findCandidateColumnIndexes(columns, chosenField) {
   if (chosenField) {
-    const idx = columns.findIndex(c => c.fieldName === chosenField || c.caption === chosenField);
+    const idx = columns.findIndex(
+      (c) => c.fieldName === chosenField || c.caption === chosenField
+    );
     return idx >= 0 ? [idx] : [];
   }
+
+  // heuristics for auto-detect
   const hints = ["url", "image", "img", "photo", "link", "href"];
   const idxs = [];
   columns.forEach((c, i) => {
     const name = `${c.fieldName || ""} ${c.caption || ""}`.toLowerCase();
-    if (hints.some(h => name.includes(h))) idxs.push(i);
+    if (hints.some((h) => name.includes(h))) idxs.push(i);
   });
+
   return idxs.length ? idxs : columns.map((_, i) => i);
 }
 
 function applySearch() {
   const q = (searchInput.value || "").trim().toLowerCase();
-  filteredUrls = q ? allUrls.filter(u => u.toLowerCase().includes(q)) : allUrls.slice();
+  filteredUrls = q ? allUrls.filter((u) => u.toLowerCase().includes(q)) : allUrls.slice();
   currentPage = 1;
   renderGrid();
 }
@@ -173,9 +212,11 @@ function renderGrid() {
 
   if (!filteredUrls.length) {
     showError(`
-      <div>
-        <div style="font-size:14px; margin-bottom:6px;">No images found.</div>
-        <div style="font-size:12px; color:#777;">Try selecting a different URL field or Load more.</div>
+      <div style="max-width:720px">
+        <div style="font-weight:800; font-size:14px; margin-bottom:8px;">No images found</div>
+        <div style="font-size:12px; color:#475569;">
+          Try selecting a different URL field, or click <b>Load more</b>.
+        </div>
       </div>
     `);
   } else {
@@ -183,7 +224,7 @@ function renderGrid() {
   }
 
   slice.forEach((url, i) => {
-    const globalIndex = (currentPage - 1) * getPageSize() + i;
+    const globalIndex = (currentPage - 1) * PAGE_SIZE + i;
 
     const card = document.createElement("div");
     card.className = "card";
@@ -195,13 +236,15 @@ function renderGrid() {
     const img = document.createElement("img");
     img.loading = "lazy";
     img.src = url;
+
     img.onerror = () => {
       img.remove();
       thumb.style.background = "#dfe6ee";
+
       const d = document.createElement("div");
       d.style.padding = "12px";
       d.style.fontSize = "12px";
-      d.style.color = "#445";
+      d.style.color = "#334155";
       d.textContent = "Image failed to load";
       thumb.appendChild(d);
     };
@@ -236,13 +279,13 @@ function renderGrid() {
 
     card.appendChild(thumb);
     card.addEventListener("click", () => openViewer(globalIndex));
-
     gridEl.appendChild(card);
   });
 
+  // paginator pills
   countPill.textContent = `${allUrls.length.toLocaleString()} images`;
   filteredPill.textContent = `${filteredUrls.length.toLocaleString()} shown`;
-  chunkPill.textContent = `Loaded: ${(loadedChunks * getChunkSize()).toLocaleString()} (chunks: ${loadedChunks})`;
+  chunkPill.textContent = `Loaded: ${(loadedChunks * CHUNK_SIZE).toLocaleString()} (chunks: ${loadedChunks})`;
   pagePill.textContent = `Page ${currentPage} / ${getTotalPages()}`;
 
   prevPageBtn.disabled = currentPage <= 1;
@@ -252,8 +295,8 @@ function renderGrid() {
 // ---------- Viewer (fit-only) ----------
 function openViewer(globalIndex) {
   if (!filteredUrls.length) return;
-  viewerIndex = Math.max(0, Math.min(filteredUrls.length - 1, globalIndex));
 
+  viewerIndex = Math.max(0, Math.min(filteredUrls.length - 1, globalIndex));
   overlayEl.classList.add("open");
   overlayEl.setAttribute("aria-hidden", "false");
   showViewerIndex(viewerIndex);
@@ -267,15 +310,15 @@ function closeViewer() {
 
 function showViewerIndex(idx) {
   if (!filteredUrls.length) return;
+
   viewerIndex = (idx + filteredUrls.length) % filteredUrls.length;
-
   const url = filteredUrls[viewerIndex];
-  viewerTitleEl.textContent = safeHost(url);
-  viewerCountEl.textContent = `${viewerIndex + 1} / ${filteredUrls.length}`;
-  openTabBtn.onclick = () => window.open(url, "_blank", "noopener,noreferrer");
 
-  // Fit is handled by CSS object-fit: contain
-  fullImgEl.src = url;
+  viewerTitleEl.textContent = safeHost(url) || "Image";
+  viewerCountEl.textContent = `${viewerIndex + 1} / ${filteredUrls.length}`;
+
+  openTabBtn.onclick = () => window.open(url, "_blank", "noopener,noreferrer");
+  fullImgEl.src = url; // fit is handled by CSS object-fit: contain
 }
 
 // ---------- Data load (chunked) ----------
@@ -288,9 +331,10 @@ async function loadChunk({ reset }) {
 
     const sheetName = getChosenSheet();
     const chosenField = getChosenField();
-    const chunkSize = getChunkSize();
 
     const cacheKey = `${sheetName}::${chosenField || "auto"}`;
+
+    // reset conditions: explicit reset or when user changes sheet/field
     if (reset || cacheKey !== lastCacheKey) {
       lastCacheKey = cacheKey;
       loadedChunks = 0;
@@ -299,17 +343,23 @@ async function loadChunk({ reset }) {
       currentPage = 1;
       loadMoreBtn.disabled = false;
       loadMoreBtn.textContent = "Load more";
+      renderGrid();
     }
 
-    const ws = dashboardRef.worksheets.find(w => w.name === sheetName);
+    const ws = dashboardRef.worksheets.find((w) => w.name === sheetName);
     if (!ws) {
-      showError(`<div class="errorText">Worksheet not found: ${escapeHtml(sheetName)}</div>`);
+      showError(`
+        <div style="max-width:720px">
+          <div style="font-weight:800; font-size:14px; margin-bottom:8px;">Worksheet not found</div>
+          <div style="font-size:12px; color:#475569;">${escapeHtml(sheetName || "")}</div>
+        </div>
+      `);
       setStatus("Worksheet not found");
       return;
     }
 
-    // Reads more rows each time (safe approach)
-    const maxRows = (loadedChunks + 1) * chunkSize;
+    // Each chunk re-requests summary data up to maxRows (simple + robust approach in Extensions API)
+    const maxRows = (loadedChunks + 1) * CHUNK_SIZE;
     setStatus(`Loading up to ${maxRows.toLocaleString()} rows…`);
 
     const summary = await ws.getSummaryDataAsync({ maxRows });
@@ -317,6 +367,7 @@ async function loadChunk({ reset }) {
     const rows = summary.data || [];
 
     buildFieldOptions(columns);
+
     const idxs = findCandidateColumnIndexes(columns, chosenField);
 
     const extracted = [];
@@ -329,6 +380,7 @@ async function loadChunk({ reset }) {
       }
     }
 
+    // De-dupe
     const before = allUrls.length;
     const seen = new Set(allUrls);
     for (const u of extracted) {
@@ -337,11 +389,13 @@ async function loadChunk({ reset }) {
       allUrls.push(u);
     }
 
+    // Only count a chunk if it increased unique urls
     if (allUrls.length > before) loadedChunks += 1;
 
     setStatus(`Loaded ${allUrls.length.toLocaleString()} unique URL(s).`);
     applySearch();
 
+    // If this "chunk" didn’t add any unique URLs, likely no more data in the view
     if (allUrls.length === before) {
       loadMoreBtn.disabled = true;
       loadMoreBtn.textContent = "No more in view";
@@ -349,11 +403,12 @@ async function loadChunk({ reset }) {
   } catch (e) {
     console.error(e);
     showError(`
-      <div class="errorText">
-        Error: ${escapeHtml(e?.message || String(e))}
-        <br/><br/>
-        If this mentions permissions, your .trex must include
-        <code>&lt;permission&gt;full data&lt;/permission&gt;</code>.
+      <div style="max-width:720px">
+        <div style="font-weight:800; font-size:14px; margin-bottom:8px;">Error</div>
+        <div style="font-size:12px; color:#475569;">${escapeHtml(e?.message || String(e))}</div>
+        <div style="font-size:12px; color:#64748b; margin-top:8px;">
+          If this mentions permissions, your <code>.trex</code> must include <code>&lt;permission&gt;full data&lt;/permission&gt;</code>.
+        </div>
       </div>
     `);
     setStatus("Error");
@@ -365,26 +420,34 @@ async function loadChunk({ reset }) {
 // ---------- Events ----------
 searchInput.addEventListener("input", applySearch);
 
-refreshBtn.addEventListener("click", () => loadChunk({ reset:true }));
-clearBtn.addEventListener("click", () => {
+refreshBtn.addEventListener("click", () => loadChunk({ reset: true }));
+
+clearBtn.addEventListener("click", async () => {
+  // Hard reset
   lastCacheKey = null;
   loadedChunks = 0;
   allUrls = [];
   filteredUrls = [];
   currentPage = 1;
+
+  // Reset UI bits
   fieldSelect.innerHTML = `<option value="">Auto-detect</option>`;
   loadMoreBtn.disabled = false;
   loadMoreBtn.textContent = "Load more";
-  setStatus("Cache cleared");
+  setStatus("Cache cleared. Reloading…");
   renderGrid();
+
+  // IMPORTANT: immediately reload so user isn't stuck with an empty state
+  await loadChunk({ reset: true });
 });
 
-loadMoreBtn.addEventListener("click", () => loadChunk({ reset:false }));
+loadMoreBtn.addEventListener("click", () => loadChunk({ reset: false }));
 
 prevPageBtn.addEventListener("click", () => {
   currentPage = clampPage(currentPage - 1);
   renderGrid();
 });
+
 nextPageBtn.addEventListener("click", () => {
   currentPage = clampPage(currentPage + 1);
   renderGrid();
@@ -392,16 +455,16 @@ nextPageBtn.addEventListener("click", () => {
 
 sheetSelect.addEventListener("change", () => {
   fieldSelect.innerHTML = `<option value="">Auto-detect</option>`;
-  loadChunk({ reset:true });
+  loadChunk({ reset: true });
 });
-fieldSelect.addEventListener("change", () => loadChunk({ reset:true }));
-chunkSelect.addEventListener("change", () => loadChunk({ reset:true }));
-pageSizeSelect.addEventListener("change", () => { currentPage = 1; renderGrid(); });
 
-// Viewer buttons
+fieldSelect.addEventListener("change", () => loadChunk({ reset: true }));
+
+// Viewer controls
 closeBtn.addEventListener("click", closeViewer);
 vPrevBtn.addEventListener("click", () => showViewerIndex(viewerIndex - 1));
 vNextBtn.addEventListener("click", () => showViewerIndex(viewerIndex + 1));
+
 window.addEventListener("keydown", (e) => {
   if (!overlayEl.classList.contains("open")) return;
   if (e.key === "Escape") closeViewer();
@@ -414,11 +477,16 @@ async function init() {
   await ensureInitialized();
   fillSheetSelect();
   setStatus("Ready");
-  await loadChunk({ reset:true });
+  await loadChunk({ reset: true });
 }
 
 init().catch((e) => {
   console.error("Init failed:", e);
-  showError(`<div class="errorText">Init error: ${escapeHtml(e?.message || String(e))}</div>`);
+  showError(`
+    <div style="max-width:720px">
+      <div style="font-weight:800; font-size:14px; margin-bottom:8px;">Init error</div>
+      <div style="font-size:12px; color:#475569;">${escapeHtml(e?.message || String(e))}</div>
+    </div>
+  `);
   setStatus("Init error");
 });
