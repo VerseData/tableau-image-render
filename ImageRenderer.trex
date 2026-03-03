@@ -6,12 +6,6 @@
     <name>Image Gallery</name>
     <description>Shows a gallery of all image URLs from a worksheet.</description>
 
-    <author
-      name="Vishal Bajaj"
-      email="vbajaj@versedata.com"
-      organization="VerseData"
-      website="https://versedata.github.io/tableau-image-render/index.html" />
-
     <author name="Vishal Bajaj" email="vbajaj@versedata.com" organization="VerseData" website="https://versedata.github.io/tableau-image-render/" />
     <min-api-version>1.7</min-api-version>
 
