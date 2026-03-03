@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Tableau Photo Gallery</title>
 
-    <!-- IMPORTANT:
-         Use a LOCAL copy for reliability inside Tableau.
-         Put tableau.extensions.1.latest.min.js in the same folder on GitHub Pages. -->
+    <!-- Put tableau.extensions.1.latest.min.js in the same GitHub Pages folder -->
     <script src="./tableau.extensions.1.latest.min.js"></script>
 
     <style>
@@ -28,7 +26,7 @@
 
       /* Top bar */
       .bar{
-        display:flex; align-items:center; gap:10px;
+        display:flex; align-items:center; gap:10px; flex-wrap:wrap;
         padding:10px 12px;
         border-bottom:1px solid var(--border);
         background:#fff;
@@ -47,10 +45,7 @@
         border-color:#cfd6ff;
         background:#f3f5ff;
       }
-      .bar button:disabled{
-        opacity:0.55;
-        cursor:not-allowed;
-      }
+      .bar button:disabled{ opacity:0.55; cursor:not-allowed; }
 
       .bar select, .bar input[type="text"]{
         padding:8px 10px;
@@ -59,6 +54,7 @@
         background:#fff;
       }
       .bar input[type="text"]{ width:240px; }
+
       .bar .status{
         flex:1;
         min-width:200px;
@@ -69,16 +65,6 @@
         color:#333;
       }
 
-      .toggle{
-        display:flex; align-items:center; gap:6px;
-        padding:6px 10px;
-        border:1px solid #ddd;
-        border-radius:12px;
-        background:#fff;
-        user-select:none;
-      }
-      .toggle input{ margin:0; }
-
       /* Main */
       .content{
         flex:1;
@@ -86,12 +72,13 @@
         display:flex;
         flex-direction:column;
         background:var(--bg);
+        position:relative;
       }
 
-      /* Info row (counts + paging) */
+      /* Info row */
       .subbar{
         display:flex; align-items:center; justify-content:space-between;
-        gap:10px;
+        gap:10px; flex-wrap:wrap;
         padding:10px 12px;
         border-bottom:1px solid var(--border);
         background:#fff;
@@ -103,26 +90,6 @@
         border-radius:999px;
         background:#fff;
         color:#333;
-        font-size:12px;
-      }
-      .pager{
-        display:flex; align-items:center; gap:8px;
-      }
-      .pager button{
-        padding:6px 10px;
-        border:1px solid #ddd;
-        border-radius:12px;
-        background:#fff;
-        cursor:pointer;
-      }
-      .pager button:disabled{ opacity:0.55; cursor:not-allowed; }
-      .pager .pagebox{
-        min-width:54px;
-        text-align:center;
-        padding:6px 10px;
-        border:1px solid #ddd;
-        border-radius:12px;
-        background:#fafafa;
         font-size:12px;
       }
 
@@ -210,7 +177,7 @@
       }
       .iconbtn:hover{ background: rgba(0,0,0,0.55); }
 
-      /* Bottom "Load more" */
+      /* Bottom */
       .footer{
         padding:10px 12px;
         border-top:1px solid var(--border);
@@ -234,7 +201,7 @@
       }
       .errorText{ color:#b00020; }
 
-      /* Lightbox viewer */
+      /* Viewer (no zoom/pan) */
       #overlay{
         position:fixed;
         inset:0;
@@ -247,7 +214,7 @@
       .viewerBar{
         position:absolute;
         top:10px; left:10px; right:10px;
-        display:flex; align-items:center; gap:8px;
+        display:flex; align-items:center; gap:8px; flex-wrap:wrap;
       }
       .viewerBar button{
         padding:8px 10px;
@@ -281,19 +248,18 @@
         overflow:hidden;
         border-radius:16px;
         background:#111;
+
+        display:grid;
+        place-items:center;
       }
-      #viewport{
-        position:absolute; inset:0;
-        display:grid; place-items:center;
-        cursor:grab; user-select:none;
-      }
-      #viewport.dragging{ cursor:grabbing; }
+
+      /* Fit to stage without transforms */
       #fullImg{
-        max-width:95%;
-        max-height:95%;
-        transform-origin:center center;
-        will-change: transform;
-        pointer-events:none;
+        width:100%;
+        height:100%;
+        object-fit:contain; /* <= key: fit inside without cropping */
+        display:block;
+        background:#111;
       }
     </style>
   </head>
@@ -343,28 +309,18 @@
           <input id="searchInput" type="text" placeholder="Search thumbnails…" />
         </div>
 
-        <label class="toggle" title="When enabled, scrolling loads next page automatically">
-          <input id="infiniteToggle" type="checkbox" />
-          <span class="small">Infinite</span>
-        </label>
-
         <input id="status" class="status" readonly value="Initializing…" />
       </div>
 
-      <div class="content" style="position:relative;">
+      <div class="content">
         <div class="subbar">
           <div class="left">
             <span id="countPill" class="pill">0 images</span>
             <span id="filteredPill" class="pill">0 shown</span>
             <span id="chunkPill" class="pill">Loaded: 0</span>
           </div>
-
-          <div class="pager">
-            <button id="firstBtn" type="button">«</button>
-            <button id="prevBtn" type="button">‹</button>
-            <div id="pageBox" class="pagebox">1 / 1</div>
-            <button id="nextBtn" type="button">›</button>
-            <button id="lastBtn" type="button">»</button>
+          <div class="left">
+            <span id="pagePill" class="pill">Page 1</span>
           </div>
         </div>
 
@@ -375,12 +331,14 @@
         </div>
 
         <div class="footer">
+          <button id="prevPageBtn" type="button">Prev</button>
+          <button id="nextPageBtn" type="button">Next</button>
           <button id="loadMoreBtn" type="button">Load more</button>
         </div>
       </div>
     </div>
 
-    <!-- Lightbox viewer -->
+    <!-- Viewer (fit only) -->
     <div id="overlay" aria-hidden="true">
       <div class="viewerBar">
         <button id="closeBtn" type="button">Close (Esc)</button>
@@ -388,18 +346,12 @@
         <button id="vNextBtn" type="button">Next ▶</button>
         <span id="viewerTitle" class="title"></span>
         <span class="spacer"></span>
-        <button id="zoomOutBtn" type="button">−</button>
-        <button id="zoomInBtn" type="button">+</button>
-        <button id="fitBtn" type="button">Fit</button>
-        <button id="resetBtn" type="button">Reset</button>
         <span id="viewerCount" class="pillDark"></span>
         <button id="openTabBtn" type="button">Open ↗</button>
       </div>
 
-      <div class="stage" id="stage">
-        <div id="viewport">
-          <img id="fullImg" alt="Selected image" />
-        </div>
+      <div class="stage">
+        <img id="fullImg" alt="Selected image" />
       </div>
     </div>
 
