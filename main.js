@@ -188,7 +188,14 @@ function findCandidateColumnIndexes(columns, chosenField) {
     return idx >= 0 ? [idx] : [];
   }
 
-  // heuristics for auto-detect
+  // Priority 1: exact match on "Image URL"
+  const exactIdx = columns.findIndex((c) => {
+    const name = (c.fieldName || c.caption || "").trim().toLowerCase();
+    return name === "image url";
+  });
+  if (exactIdx >= 0) return [exactIdx];
+
+  // Priority 2: heuristic — column name contains a URL-related keyword
   const hints = ["url", "image", "img", "photo", "link", "href"];
   const idxs = [];
   columns.forEach((c, i) => {
