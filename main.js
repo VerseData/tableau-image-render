@@ -321,6 +321,28 @@ function showViewerIndex(idx) {
   fullImgEl.src = url; // fit is handled by CSS object-fit: contain
 }
 
+// ---------- Data fetch (row-level preferred over summary) ----------
+async function getDataTable(ws, maxRows) {
+  try {
+    const tables = await ws.getUnderlyingTablesAsync();
+    if (tables && tables.length > 0) {
+      const tbl = await ws.getUnderlyingTableDataAsync(tables[0].id, {
+        maxRows,
+        ignoreAliases: false,
+        ignoreSelection: true,
+        includeAllColumns: true,
+      });
+      tbl._sourceMode = "row-level";
+      return tbl;
+    }
+  } catch (_) {
+    // underlying data not available — fall through
+  }
+  const tbl = await ws.getSummaryDataAsync({ maxRows });
+  tbl._sourceMode = "summary";
+  return tbl;
+}
+
 // ---------- Data load (chunked) ----------
 async function loadChunk({ reset }) {
   if (loading) return;
@@ -358,11 +380,11 @@ async function loadChunk({ reset }) {
       return;
     }
 
-    // Each chunk re-requests summary data up to maxRows (simple + robust approach in Extensions API)
+    // Each chunk re-requests data up to maxRows (simple + robust approach in Extensions API)
     const maxRows = (loadedChunks + 1) * CHUNK_SIZE;
     setStatus(`Loading up to ${maxRows.toLocaleString()} rows…`);
 
-    const summary = await ws.getSummaryDataAsync({ maxRows });
+    const summary = await getDataTable(ws, maxRows);
     const columns = summary.columns || [];
     const rows = summary.data || [];
 
@@ -392,7 +414,8 @@ async function loadChunk({ reset }) {
     loadedChunks += 1;
 
     const candidateNames = idxs.map(i => columns[i]?.fieldName || columns[i]?.caption || `col[${i}]`).join(", ");
-    setStatus(`Rows: ${rows.length} | Cols: ${columns.length} | Scanning: [${candidateNames || "none"}]\nLoaded ${allUrls.length.toLocaleString()} unique URL(s).`);
+    const mode = summary._sourceMode || "unknown";
+    setStatus(`[${mode}] Rows: ${rows.length} | Cols: ${columns.length} | Scanning: [${candidateNames || "none"}]\nLoaded ${allUrls.length.toLocaleString()} unique URL(s).`);
     applySearch();
 
     // Only stop when the API returned fewer rows than requested — data exhausted
