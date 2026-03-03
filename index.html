@@ -102,18 +102,17 @@
 
     .control { display: flex; flex-direction: column; }
 
-    /* ── Paginator bar ──────────────────────────── */
-    .paginatorBar {
+    /* ── Paginator row (inside topbar) ─────────── */
+    .topbarPaginator {
+      flex-basis: 100%;          /* forces onto its own line inside the topbar flex */
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
       flex-wrap: wrap;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 8px 12px;
-      box-shadow: var(--shadow);
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      margin-top: 4px;
     }
 
     .pills {
@@ -339,18 +338,18 @@
         <label for="searchInput">Search</label>
         <input id="searchInput" type="search" placeholder="Filter URLs…" />
       </div>
-    </div>
 
-    <!-- Paginator: image count + page + navigation -->
-    <div class="paginatorBar" id="paginator">
-      <div class="pills">
-        <span class="pill" id="countPill">0 images</span>
-        <span class="pill" id="pagePill">Page 1 / 1</span>
-      </div>
-      <div class="pageControls">
-        <button id="prevPageBtn" class="btn" type="button">Prev</button>
-        <button id="nextPageBtn" class="btn" type="button">Next</button>
-        <button id="loadMoreBtn" class="btn" type="button">Load more</button>
+      <!-- Paginator inline — full-width second row inside the topbar -->
+      <div class="topbarPaginator" id="paginator">
+        <div class="pills">
+          <span class="pill" id="countPill">0 images</span>
+          <span class="pill" id="pagePill">Page 1 / 1</span>
+        </div>
+        <div class="pageControls">
+          <button id="prevPageBtn" class="btn" type="button">Prev</button>
+          <button id="nextPageBtn" class="btn" type="button">Next</button>
+          <button id="loadMoreBtn" class="btn" type="button">Load more</button>
+        </div>
       </div>
     </div>
 
@@ -383,6 +382,6 @@
     </div>
   </div>
 
-  <script src="./main.js?v=2"></script>
+  <script src="./main.js?v=3"></script>
 </body>
 </html>
