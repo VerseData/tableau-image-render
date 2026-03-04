@@ -250,15 +250,11 @@ function registerFilterListener(ws) {
     filterDebounceTimer = setTimeout(() => loadChunk({ reset: true }), 400);
   };
 
-  const eventTypes = [
-    tableau.TableauEventType.FilterChanged,
-    tableau.TableauEventType.MarkSelectionChanged,
-  ];
-  for (const type of eventTypes) {
-    try {
-      filterUnregisterFns.push(ws.addEventListener(type, handler));
-    } catch (_) {}
-  }
+  try {
+    filterUnregisterFns.push(
+      ws.addEventListener(tableau.TableauEventType.FilterChanged, handler)
+    );
+  } catch (_) {}
 }
 
 function applySearch() {
