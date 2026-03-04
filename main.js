@@ -69,6 +69,11 @@ let loadedChunks = 0;
 let lastCacheKey = null;
 let loading = false;
 
+// Filter-change listeners
+let filterUnregisterFns = [];
+let filterDebounceTimer = null;
+let lastListenedSheet = null;
+
 // ---------- Helpers ----------
 function setStatus(msg) {
   console.log("[status]", msg);
@@ -230,6 +235,30 @@ function buildLabel(location, date) {
   const dt  = String(date   || "").trim();
   if (loc && dt) return `${loc} (${dt})`;
   return loc || dt || "";
+}
+
+function registerFilterListener(ws) {
+  if (!ws || ws.name === lastListenedSheet) return;
+
+  // Remove old listeners
+  filterUnregisterFns.forEach((fn) => { try { fn(); } catch (_) {} });
+  filterUnregisterFns = [];
+  lastListenedSheet = ws.name;
+
+  const handler = () => {
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(() => loadChunk({ reset: true }), 400);
+  };
+
+  const eventTypes = [
+    tableau.TableauEventType.FilterChanged,
+    tableau.TableauEventType.MarkSelectionChanged,
+  ];
+  for (const type of eventTypes) {
+    try {
+      filterUnregisterFns.push(ws.addEventListener(type, handler));
+    } catch (_) {}
+  }
 }
 
 function applySearch() {
@@ -404,6 +433,7 @@ async function loadChunk({ reset }) {
     }
 
     const ws = dashboardRef.worksheets.find((w) => w.name === sheetName);
+    registerFilterListener(ws);
     if (!ws) {
       showError(`
         <div style="max-width:720px">
@@ -542,6 +572,7 @@ nextPageBtn.addEventListener("click", () => {
 });
 
 sheetSelect.addEventListener("change", () => {
+  lastListenedSheet = null; // force listener re-registration on new sheet
   fieldSelect.innerHTML = `<option value="">Auto-detect</option>`;
   loadChunk({ reset: true });
 });
