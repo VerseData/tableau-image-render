@@ -435,9 +435,9 @@ async function loadChunk({ reset }) {
         const url  = normalizeUrl(raw);
         if (!url) continue;
 
-        const location = locationIdx >= 0 ? (row[locationIdx]?.formattedValue ?? row[locationIdx]?.value ?? "") : "";
-        const date     = dateIdx     >= 0 ? (row[dateIdx]?.formattedValue     ?? row[dateIdx]?.value     ?? "") : "";
-        extracted.push({ url, label: buildLabel(location, date) });
+        const location = String(locationIdx >= 0 ? (row[locationIdx]?.formattedValue ?? row[locationIdx]?.value ?? "") : "").trim();
+        const date     = String(dateIdx     >= 0 ? (row[dateIdx]?.formattedValue     ?? row[dateIdx]?.value     ?? "") : "").trim();
+        extracted.push({ url, label: buildLabel(location, date), location, date });
       }
     }
 
@@ -448,6 +448,13 @@ async function loadChunk({ reset }) {
       seen.add(item.url);
       allUrls.push(item);
     }
+
+    // Sort: Visit Date descending, then Location Name ascending
+    allUrls.sort((a, b) => {
+      const dateCmp = (b.date || "").localeCompare(a.date || "", undefined, { numeric: true, sensitivity: "base" });
+      if (dateCmp !== 0) return dateCmp;
+      return (a.location || "").localeCompare(b.location || "", undefined, { numeric: true, sensitivity: "base" });
+    });
 
     // Always advance the chunk counter so the next load requests a larger row window
     loadedChunks += 1;
