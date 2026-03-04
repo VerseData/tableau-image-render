@@ -449,11 +449,13 @@ async function loadChunk({ reset }) {
       allUrls.push(item);
     }
 
-    // Sort: Visit Date descending, then Location Name ascending
+    // Sort: Visit Date descending (YYYY-MM-DD string comparison = chronological),
+    //       then Location Name ascending (locale-aware)
     allUrls.sort((a, b) => {
-      const dateCmp = (b.date || "").localeCompare(a.date || "", undefined, { numeric: true, sensitivity: "base" });
-      if (dateCmp !== 0) return dateCmp;
-      return (a.location || "").localeCompare(b.location || "", undefined, { numeric: true, sensitivity: "base" });
+      const da = a.date || "", db = b.date || "";
+      if (db > da) return  1;
+      if (db < da) return -1;
+      return (a.location || "").localeCompare(b.location || "", undefined, { sensitivity: "base" });
     });
 
     // Always advance the chunk counter so the next load requests a larger row window
