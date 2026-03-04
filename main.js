@@ -46,6 +46,10 @@ const searchInput = document.getElementById("searchInput");
 const countPill = document.getElementById("countPill");
 const pagePill = document.getElementById("pagePill");
 
+// Settings gear
+const settingsBtn   = document.getElementById("settingsBtn");
+const settingsPanel = document.getElementById("settingsPanel");
+
 // Viewer
 const overlayEl = document.getElementById("overlay");
 const closeBtn = document.getElementById("closeBtn");
@@ -489,6 +493,19 @@ async function loadChunk({ reset }) {
 }
 
 // ---------- Events ----------
+settingsBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  settingsPanel.classList.toggle("open");
+  settingsBtn.classList.toggle("active");
+});
+
+document.addEventListener("click", (e) => {
+  if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) {
+    settingsPanel.classList.remove("open");
+    settingsBtn.classList.remove("active");
+  }
+});
+
 searchInput.addEventListener("input", applySearch);
 
 refreshBtn.addEventListener("click", () => loadChunk({ reset: true }));

@@ -41,18 +41,20 @@
       padding: 8px;
     }
 
-    /* ── Top bar ────────────────────────────────── */
+    /* ── Top bar (single row) ───────────────────── */
     .topbar {
       display: flex;
       gap: 10px;
-      align-items: flex-end;   /* buttons bottom-align with selects */
-      flex-wrap: wrap;
+      align-items: center;
+      flex-wrap: nowrap;
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 10px 12px;
       box-shadow: var(--shadow);
     }
+    .topbar .searchControl { flex: 1; min-width: 0; }
+    .topbar .searchControl input { width: 100%; min-width: 0; }
 
     .btn {
       border: 1px solid var(--border);
@@ -102,27 +104,43 @@
 
     .control { display: flex; flex-direction: column; }
 
-    /* ── Second row: Search + paginator on one line ── */
-    .topbarRow2 {
-      flex-basis: 100%;          /* forces onto its own line inside the topbar flex */
-      display: flex;
-      align-items: flex-end;
-      gap: 10px;
-      flex-wrap: nowrap;
-      border-top: 1px solid var(--border);
-      padding-top: 8px;
-      margin-top: 4px;
+    /* ── Settings gear + dropdown panel ─────────── */
+    .settingsWrap { position: relative; }
+
+    .settingsBtn {
+      font-size: 16px;
+      padding: 5px 10px;
+      color: var(--muted);
+      line-height: 1;
     }
-    .topbarRow2 .searchControl {
-      flex: 1;
-      min-width: 0;
-      display: flex;
+    .settingsBtn:hover { color: var(--text); border-color: #4a5260; }
+    .settingsBtn.active { color: var(--accent); border-color: var(--accent); }
+
+    .settingsPanel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.55);
+      z-index: 200;
       flex-direction: column;
+      gap: 12px;
+      min-width: 340px;
     }
-    .topbarRow2 .searchControl input {
-      width: 100%;
-      min-width: 0;
+    .settingsPanel.open { display: flex; }
+
+    .settingsRow {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-wrap: wrap;
     }
+    .settingsRow .control { flex: 1; min-width: 130px; }
+    .settingsRow select { width: 100%; min-width: 0; }
 
     .pills {
       display: flex;
@@ -326,36 +344,43 @@
 <body>
   <div class="app">
 
-    <!-- Top bar: buttons + selectors all bottom-aligned -->
+    <!-- Top bar: single row — search / pills / nav / gear -->
     <div class="topbar">
-      <button id="refreshBtn" class="btn primary" type="button">Refresh</button>
-      <button id="clearBtn" class="btn danger" type="button">Clear Cache</button>
-
-      <div class="control">
-        <label for="sheetSelect">Sheet</label>
-        <select id="sheetSelect"></select>
+      <div class="searchControl">
+        <input id="searchInput" type="search" placeholder="Search text" />
       </div>
 
-      <div class="control">
-        <label for="fieldSelect">URL field</label>
-        <select id="fieldSelect">
-          <option value="">Auto-detect</option>
-        </select>
+      <div class="pills">
+        <span class="pill" id="countPill">0 images</span>
+        <span class="pill" id="pagePill">Page 1 / 1</span>
       </div>
 
-      <!-- Second row: Search fills empty space, pills + buttons on the right -->
-      <div class="topbarRow2" id="paginator">
-        <div class="searchControl">
-          <input id="searchInput" type="search" placeholder="Search text" />
-        </div>
-        <div class="pills">
-          <span class="pill" id="countPill">0 images</span>
-          <span class="pill" id="pagePill">Page 1 / 1</span>
-        </div>
-        <div class="pageControls">
-          <button id="prevPageBtn" class="btn" type="button">Prev</button>
-          <button id="nextPageBtn" class="btn" type="button">Next</button>
-          <button id="loadMoreBtn" class="btn" type="button">Load more</button>
+      <div class="pageControls">
+        <button id="prevPageBtn" class="btn" type="button">Prev</button>
+        <button id="nextPageBtn" class="btn" type="button">Next</button>
+        <button id="loadMoreBtn" class="btn" type="button">Load more</button>
+
+        <!-- Gear icon opens settings dropdown -->
+        <div class="settingsWrap">
+          <button id="settingsBtn" class="btn settingsBtn" type="button" title="Settings">⚙</button>
+          <div class="settingsPanel" id="settingsPanel">
+            <div class="settingsRow">
+              <button id="refreshBtn" class="btn primary" type="button">Refresh</button>
+              <button id="clearBtn" class="btn danger" type="button">Clear Cache</button>
+            </div>
+            <div class="settingsRow">
+              <div class="control">
+                <label for="sheetSelect">Sheet</label>
+                <select id="sheetSelect"></select>
+              </div>
+              <div class="control">
+                <label for="fieldSelect">URL Field</label>
+                <select id="fieldSelect">
+                  <option value="">Auto-detect</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -389,6 +414,6 @@
     </div>
   </div>
 
-  <script src="./main.js?v=4"></script>
+  <script src="./main.js?v=5"></script>
 </body>
 </html>
