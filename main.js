@@ -203,9 +203,37 @@ function findCandidateColumnIndexes(columns, chosenField) {
   return idxs.length ? idxs : columns.map((_, i) => i);
 }
 
+// Find a single meta column (Location Name, Visit Date, etc.)
+function findMetaColumnIndex(columns, exactName, keywords) {
+  const exactIdx = columns.findIndex((c) => {
+    const name = (c.fieldName || c.caption || "").trim().toLowerCase();
+    return name === exactName.toLowerCase();
+  });
+  if (exactIdx >= 0) return exactIdx;
+
+  for (const kw of keywords) {
+    const idx = columns.findIndex((c) => {
+      const name = `${c.fieldName || ""} ${c.caption || ""}`.toLowerCase();
+      return name.includes(kw.toLowerCase());
+    });
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function buildLabel(location, date) {
+  const loc = String(location || "").trim();
+  const dt  = String(date   || "").trim();
+  if (loc && dt) return `${loc} (${dt})`;
+  return loc || dt || "";
+}
+
 function applySearch() {
   const q = (searchInput.value || "").trim().toLowerCase();
-  filteredUrls = q ? allUrls.filter((u) => u.toLowerCase().includes(q)) : allUrls.slice();
+  filteredUrls = q
+    ? allUrls.filter(({ url, label }) =>
+        url.toLowerCase().includes(q) || label.toLowerCase().includes(q))
+    : allUrls.slice();
   currentPage = 1;
   renderGrid();
 }
@@ -227,12 +255,13 @@ function renderGrid() {
     hideError();
   }
 
-  slice.forEach((url, i) => {
+  slice.forEach((item, i) => {
+    const { url, label } = item;
     const globalIndex = (currentPage - 1) * PAGE_SIZE + i;
 
     const card = document.createElement("div");
     card.className = "card";
-    card.title = url;
+    card.title = label || url;
 
     const thumb = document.createElement("div");
     thumb.className = "thumb";
@@ -243,12 +272,12 @@ function renderGrid() {
 
     img.onerror = () => {
       img.remove();
-      thumb.style.background = "#dfe6ee";
+      thumb.style.background = "#1e2229";
 
       const d = document.createElement("div");
       d.style.padding = "12px";
       d.style.fontSize = "12px";
-      d.style.color = "#334155";
+      d.style.color = "#8891a2";
       d.textContent = "Image failed to load";
       thumb.appendChild(d);
     };
@@ -262,7 +291,7 @@ function renderGrid() {
 
     const text = document.createElement("div");
     text.className = "text";
-    text.textContent = safeHost(url);
+    text.textContent = label || safeHost(url);
 
     const icon = document.createElement("button");
     icon.className = "iconbtn";
@@ -314,9 +343,9 @@ function showViewerIndex(idx) {
   if (!filteredUrls.length) return;
 
   viewerIndex = (idx + filteredUrls.length) % filteredUrls.length;
-  const url = filteredUrls[viewerIndex];
+  const { url, label } = filteredUrls[viewerIndex];
 
-  viewerTitleEl.textContent = safeHost(url) || "Image";
+  viewerTitleEl.textContent = label || safeHost(url) || "Image";
   viewerCountEl.textContent = `${viewerIndex + 1} / ${filteredUrls.length}`;
 
   openTabBtn.onclick = () => window.open(url, "_blank", "noopener,noreferrer");
@@ -394,22 +423,30 @@ async function loadChunk({ reset }) {
 
     const idxs = findCandidateColumnIndexes(columns, chosenField);
 
+    // Find location name and visit date columns for the overlay label
+    const locationIdx = findMetaColumnIndex(columns, "Location Name", ["location name", "location", "store name", "store"]);
+    const dateIdx     = findMetaColumnIndex(columns, "Visit Date",     ["visit date", "date"]);
+
     const extracted = [];
     for (const row of rows) {
       for (const colIdx of idxs) {
         const cell = row[colIdx];
-        const raw = cell?.value ?? cell?.formattedValue ?? null;
-        const url = normalizeUrl(raw);
-        if (url) extracted.push(url);
+        const raw  = cell?.value ?? cell?.formattedValue ?? null;
+        const url  = normalizeUrl(raw);
+        if (!url) continue;
+
+        const location = locationIdx >= 0 ? (row[locationIdx]?.formattedValue ?? row[locationIdx]?.value ?? "") : "";
+        const date     = dateIdx     >= 0 ? (row[dateIdx]?.formattedValue     ?? row[dateIdx]?.value     ?? "") : "";
+        extracted.push({ url, label: buildLabel(location, date) });
       }
     }
 
-    // De-dupe
-    const seen = new Set(allUrls);
-    for (const u of extracted) {
-      if (seen.has(u)) continue;
-      seen.add(u);
-      allUrls.push(u);
+    // De-dupe by URL string
+    const seen = new Set(allUrls.map((item) => item.url));
+    for (const item of extracted) {
+      if (seen.has(item.url)) continue;
+      seen.add(item.url);
+      allUrls.push(item);
     }
 
     // Always advance the chunk counter so the next load requests a larger row window
